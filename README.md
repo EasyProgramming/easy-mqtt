@@ -18,20 +18,20 @@
 
 启动kvrocks
 
-1.下载编译好的kvrocks二进制文件压缩包，点击[这里](https://github.com/EasyProgramming/easy-mqtt/releases/tag/v1.0.0)下载
+1.点击 [这里](https://github.com/EasyProgramming/easy-mqtt/releases) 下载最新的已编译的kvrocks压缩包
 
-2.解压缩，安装包，执行如下命令
+2.将包解压缩后，进入解压缩后的目录，执行如下命令
 
 ```shell script
-sh bin/start.sh -c conf/conf.yml
+sh bin/kvrocks -c bin/kvrocks.conf
 ```
 ---
 
 启动easy mqtt
 
-1.下载编译好的安装包，点击[这里](https://github.com/EasyProgramming/easy-mqtt/releases/tag/v1.0.0)下载
+1.点击 [这里](https://github.com/EasyProgramming/easy-mqtt/releases) 下载最新的已编译的easy mqtt压缩包
 
-2.解压缩安装包，并进入解压缩后的目录，执行如下命令：
+2.将包解压缩后，进入解压缩后的目录，执行如下命令：
 ```shell script
 sh bin/start.sh -c conf/conf.yml
 ```
