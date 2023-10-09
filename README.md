@@ -83,14 +83,11 @@ cpu
 
 ---
 
-群发消息场景（待测试）
+发送消息场景
 
-5w个客户端订阅同一个topic，使用500个客户端向这个topic发消息，统计客户端每秒收到的消息数量即为easy-mqtt处理消息的tps
+2w个客户端订阅同一个topic，使用另外50个客户端分别向这个topic发送一条qos=1消息，tps=50*2w/处理时间；kvrocks的配置为4c8g
 
----
-p2p消息场景（待测试）
-
-2w个客户端订阅2w个topic，使用2w个客户端分别向这2w个topic发消息，统计客户端每秒收到的消息数量即为easy-mqtt处理消息的tps
+处理时间为?s，tps为?w
 
 ## 👍 开源推荐
 - `Apache Kvrocks` Apache Kvrocks是一个分布式键值NoSQL数据库，使用RocksDB作为存储引擎，兼容Redis协议：[https://github.com/apache/kvrocks](https://github.com/apache/kvrocks)
