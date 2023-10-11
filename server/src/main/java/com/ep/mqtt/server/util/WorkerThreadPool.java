@@ -25,15 +25,16 @@ public class WorkerThreadPool {
 
     private static final TimeUnit MAX_EXECUTE_TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    public static void init(Integer workerThreadPoolSize){
+    public static void init(Integer dealMessageThreadPoolSize){
         VertxOptions vertxOptions = new VertxOptions();
         vertxOptions.setWarningExceptionTime(MAX_EXECUTE_TIME * 2);
         vertxOptions.setWarningExceptionTimeUnit(MAX_EXECUTE_TIME_UNIT);
         VERTX = Vertx.vertx(vertxOptions);
         DEFAULT_WORKER_EXECUTOR =
-                VERTX.createSharedWorkerExecutor("worker-thread-pool", workerThreadPoolSize, MAX_EXECUTE_TIME, MAX_EXECUTE_TIME_UNIT);
+                VERTX.createSharedWorkerExecutor("worker-thread-pool", Runtime.getRuntime().availableProcessors() * 2, MAX_EXECUTE_TIME,
+                        MAX_EXECUTE_TIME_UNIT);
         DEAL_MESSAGE_WORKER_EXECUTOR =
-                VERTX.createSharedWorkerExecutor("deal-message-thread-pool", workerThreadPoolSize, MAX_EXECUTE_TIME, MAX_EXECUTE_TIME_UNIT);
+                VERTX.createSharedWorkerExecutor("deal-message-thread-pool", dealMessageThreadPoolSize, MAX_EXECUTE_TIME, MAX_EXECUTE_TIME_UNIT);
     }
 
     public static <T> void execute(Consumer<Promise<T>> blockingHandlerConsumer) {

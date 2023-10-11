@@ -59,7 +59,7 @@ public class MqttServerProperties {
     private Integer listenerPoolSize = Runtime.getRuntime().availableProcessors() * 2;
 
     /**
-     * 业务线程池的大小
+     * 处理消息线程池的大小
      */
-    private Integer workerThreadPoolSize = Runtime.getRuntime().availableProcessors() * 6;
+    private Integer dealMessageThreadPoolSize = Runtime.getRuntime().availableProcessors() * 3;
 }

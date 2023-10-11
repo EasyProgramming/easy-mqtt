@@ -48,8 +48,8 @@ sh bin/start.sh -c conf/conf.yml
 | mqtt.server.api-port                      | api端口                                                                                 |  8083                         |
 | mqtt.server.websocket-path                | websocket连接地址                                                                         | /websocket                         |
 | mqtt.server.authentication-url            | 认证接口地址，如果为null或空字符串则不鉴权                                                       |                          |
-| mqtt.server.listener-pool-size            | 监听器的线程池大小                                                                         | 核心数*2                         |
-| mqtt.server.worker-thread-pool-size       | 业务线程池的大小                                                                              |  核心数*6                         |
+| mqtt.server.listener-pool-size                  | 监听器的线程池大小                                                                         | 核心数*2                         |
+| mqtt.server.deal-message-thread-pool-size       | 处理消息线程池的大小                                                                              |  核心数*3                         |
 | kvrocks.host                              | kvrocks的地址                                                                                |  127.0.0.1                         |
 | kvrocks.port                              | kvrocks的端口                                                                                |  6666                         |
 | kvrocks.pool.min-idle                     | kvrocks连接池中的最小空闲连接数                                                               |   12                         |

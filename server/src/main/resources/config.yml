@@ -10,7 +10,7 @@ mqtt:
     websocket-path: "/websocket"
     authentication-url: ""
     listener-pool-size: 10
-    worker-thread-pool-size: 10
+    deal-message-thread-pool-size: 10
   kvrocks:
     host: 127.0.0.1
     port: 6666

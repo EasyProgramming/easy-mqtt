@@ -18,7 +18,7 @@ public class WorkerThreadPoolConfig {
 
     @PostConstruct
     public void init(){
-        WorkerThreadPool.init(mqttServerProperties.getWorkerThreadPoolSize());
+        WorkerThreadPool.init(mqttServerProperties.getDealMessageThreadPoolSize());
     }
 
 }
