@@ -19,9 +19,9 @@
         </fileSet>
 
         <fileSet>
-            <directory>build/conf</directory>
+            <directory>src/main/resources</directory>
             <includes>
-                <include>*.*</include>
+                <include>config.yml</include>
             </includes>
             <fileMode>0755</fileMode>
             <directoryMode>0755</directoryMode>
