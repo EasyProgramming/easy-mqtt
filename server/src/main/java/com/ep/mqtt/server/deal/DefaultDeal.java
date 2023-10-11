@@ -375,7 +375,7 @@ public class DefaultDeal {
                 messageVo.setIsDup(true);
                 MqttUtil.sendPublish(channelHandlerContext, messageVo);
             });
-        }, null);
+        });
         // 重发PubRec报文
         WorkerThreadPool.execute((a) -> {
             String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
@@ -387,7 +387,7 @@ public class DefaultDeal {
                 }
                 MqttUtil.sendPubRec(channelHandlerContext, Integer.valueOf(messageIdStr));
             });
-        }, null);
+        });
         // 重发PubRel报文
         WorkerThreadPool.execute((a) -> {
             String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
@@ -399,7 +399,7 @@ public class DefaultDeal {
                 }
                 MqttUtil.sendPubRel(channelHandlerContext, Integer.valueOf(messageIdStr));
             });
-        }, null);
+        });
     }
 
     public void refreshData(Session session) {

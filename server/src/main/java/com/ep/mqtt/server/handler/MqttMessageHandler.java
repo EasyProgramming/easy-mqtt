@@ -78,7 +78,7 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         if (StringUtils.isNotBlank(clientId)) {
             Session session = SessionManager.get(clientId);
             if (session.getIsCleanSession()) {
-                WorkerThreadPool.execute(promise -> defaultDeal.clearClientData(clientId), null);
+                WorkerThreadPool.execute(promise -> defaultDeal.clearClientData(clientId));
             }
             SessionManager.unbind(clientId);
         }

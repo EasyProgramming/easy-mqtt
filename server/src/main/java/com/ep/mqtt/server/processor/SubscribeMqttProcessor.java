@@ -51,9 +51,7 @@ public class SubscribeMqttProcessor extends AbstractMqttProcessor<MqttSubscribeM
         MqttSubAckMessage mqttSubAckMessage =
             MqttMessageBuilders.subAck().addGrantedQoses(qoses).packetId(subMessageId).build();
         channelHandlerContext.writeAndFlush(mqttSubAckMessage);
-        WorkerThreadPool.execute(
-            (Handler<Promise<Void>>)event -> defaultDeal.sendTopicRetainMessage(clientId, successSubscribeTopicList),
-            null);
+        WorkerThreadPool.execute(event -> defaultDeal.sendTopicRetainMessage(clientId, successSubscribeTopicList));
     }
 
     @Override
