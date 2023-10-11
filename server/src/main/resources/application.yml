@@ -5,8 +5,8 @@ spring:
     cluster:
       nodes: ${mqtt.kvrocks.cluster.nodes}
       max-redirects: ${mqtt.kvrocks.cluster.max-redirects}
-    host: ${mqtt.kvrocks.host:127.0.0.1}
-    port: ${mqtt.kvrocks.port:6666}
+    host: ${mqtt.kvrocks.host}
+    port: ${mqtt.kvrocks.port}
     lettuce:
       pool:
         min-idle: ${mqtt.kvrocks.pool.min-idle:12}

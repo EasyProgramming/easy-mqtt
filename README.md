@@ -50,8 +50,8 @@ sh bin/start.sh -c conf/conf.yml
 | mqtt.server.authentication-url            | 认证接口地址，如果为null或空字符串则不鉴权                                                       |                          |
 | mqtt.server.listener-pool-size                  | 监听器的线程池大小                                                                         | 核心数*2                         |
 | mqtt.server.deal-message-thread-pool-size       | 处理消息线程池的大小                                                                              |  核心数*3                         |
-| mqtt.kvrocks.host                              | kvrocks的地址                                                                                |  127.0.0.1                         |
-| mqtt.kvrocks.port                              | kvrocks的端口                                                                                |  6666                         |
+| mqtt.kvrocks.host                              | kvrocks的地址                                                                                |                           |
+| mqtt.kvrocks.port                              | kvrocks的端口                                                                                |                          |
 | mqtt.kvrocks.password                          | kvrocks的密码                                                                                   |                           |
 | mqtt.kvrocks.cluster.nodes                     | kvrocks节点地址，示例`192.168.2.222:7003,192.168.2.222:7004`                               |                           |
 | mqtt.kvrocks.cluster.cluster.max-redirects     | kvrocks集群执行命令时的最大重定向次数                                                           |                          |
