@@ -1,6 +1,8 @@
 package com.ep.mqtt.server.processor;
 
+import com.ep.mqtt.server.util.MqttUtil;
 import com.ep.mqtt.server.util.NettyUtil;
+import com.ep.mqtt.server.util.WorkerThreadPool;
 import com.ep.mqtt.server.vo.MessageVo;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -21,13 +23,14 @@ public class PubRelMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
     protected void process(ChannelHandlerContext channelHandlerContext, MqttMessage mqttMessage) {
         Integer messageId = getMessageId(mqttMessage);
         String clientId = NettyUtil.getClientId(channelHandlerContext);
-        MessageVo messageVo = defaultDeal.getRecMessage(clientId, messageId);
-        if (messageVo == null) {
-            return;
-        }
-        defaultDeal.sendMessage(messageVo);
-        defaultDeal.delRecMessage(clientId, messageId);
-        sendPubComp(channelHandlerContext, messageId);
+        WorkerThreadPool.dealMessage((a)-> {
+            MessageVo messageVo = defaultDeal.getRecMessage(clientId, messageId);
+            if (messageVo == null) {
+                return;
+            }
+            defaultDeal.sendMessage(messageVo);
+            defaultDeal.delRecMessage(clientId, messageId);
+        }, ()-> sendPubComp(channelHandlerContext, messageId), channelHandlerContext);
     }
 
     @Override

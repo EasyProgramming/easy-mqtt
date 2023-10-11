@@ -3,6 +3,7 @@ package com.ep.mqtt.server.processor;
 import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.util.MqttUtil;
 import com.ep.mqtt.server.util.NettyUtil;
+import com.ep.mqtt.server.util.WorkerThreadPool;
 import com.ep.mqtt.server.vo.MessageVo;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -25,19 +26,20 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttPublishMessage mqttPublishMessage) {
         MessageVo messageVo = convert(mqttPublishMessage, channelHandlerContext);
-        defaultDeal.dealMessage(messageVo);
-        switch (mqttPublishMessage.fixedHeader().qosLevel()) {
-            case AT_LEAST_ONCE:
-                MqttMessage publishAckMessage =
-                        MqttMessageBuilders.pubAck().packetId(messageVo.getFromMessageId()).build();
-                channelHandlerContext.writeAndFlush(publishAckMessage);
-                break;
-            case EXACTLY_ONCE:
-                MqttUtil.sendPubRec(channelHandlerContext, messageVo.getFromMessageId());
-                break;
-            default:
-                break;
-        }
+        WorkerThreadPool.dealMessage((a)-> defaultDeal.dealMessage(messageVo), ()->{
+            switch (mqttPublishMessage.fixedHeader().qosLevel()) {
+                case AT_LEAST_ONCE:
+                    MqttMessage publishAckMessage =
+                            MqttMessageBuilders.pubAck().packetId(messageVo.getFromMessageId()).build();
+                    channelHandlerContext.writeAndFlush(publishAckMessage);
+                    break;
+                case EXACTLY_ONCE:
+                    MqttUtil.sendPubRec(channelHandlerContext, messageVo.getFromMessageId());
+                    break;
+                default:
+                    break;
+            }
+        }, channelHandlerContext);
     }
 
     private MessageVo convert(MqttPublishMessage mqttPublishMessage, ChannelHandlerContext channelHandlerContext) {

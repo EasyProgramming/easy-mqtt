@@ -1,6 +1,7 @@
 package com.ep.mqtt.server.processor;
 
 import com.ep.mqtt.server.util.NettyUtil;
+import com.ep.mqtt.server.util.WorkerThreadPool;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
@@ -20,8 +21,8 @@ public class PubAckMqttProcessor extends AbstractMqttProcessor<MqttPubAckMessage
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttPubAckMessage mqttPubAckMessage) {
-        defaultDeal.delMessage(NettyUtil.getClientId(channelHandlerContext),
-                mqttPubAckMessage.variableHeader().messageId());
+        WorkerThreadPool.dealMessage((a)-> defaultDeal.delMessage(NettyUtil.getClientId(channelHandlerContext),
+                mqttPubAckMessage.variableHeader().messageId()), null, channelHandlerContext);
     }
 
     @Override
