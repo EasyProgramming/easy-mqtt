@@ -50,13 +50,16 @@ sh bin/start.sh -c conf/conf.yml
 | mqtt.server.authentication-url            | 认证接口地址，如果为null或空字符串则不鉴权                                                       |                          |
 | mqtt.server.listener-pool-size                  | 监听器的线程池大小                                                                         | 核心数*2                         |
 | mqtt.server.deal-message-thread-pool-size       | 处理消息线程池的大小                                                                              |  核心数*3                         |
-| kvrocks.host                              | kvrocks的地址                                                                                |  127.0.0.1                         |
-| kvrocks.port                              | kvrocks的端口                                                                                |  6666                         |
-| kvrocks.pool.min-idle                     | kvrocks连接池中的最小空闲连接数                                                               |   12                         |
-| kvrocks.pool.max-active                   | kvrocks连接池可以分配的最大连接数。使用负值表示无限制                                            |  12                         |
-| kvrocks.pool.max-idle                     | kvrocks连接池中的最大空闲连接数。使用负值表示无限制                                             |  12                         |
-| kvrocks.pool.max-wait                     | kvrocks连接池资源耗尽时，连接尝试分配阻塞时间，超时即抛出异常。使用负值无限期阻塞                     |  -1                         |
-| kvrocks.pool.time-between-eviction-runs   | kvrocks连接池空闲对象逐出器线程的运行间隔时间。当为正值时，启动空闲对象逐出器线程，否则不执行空闲对象逐出                     |  -1                         |
+| mqtt.kvrocks.host                              | kvrocks的地址                                                                                |  127.0.0.1                         |
+| mqtt.kvrocks.port                              | kvrocks的端口                                                                                |  6666                         |
+| mqtt.kvrocks.password                          | kvrocks的密码                                                                                   |                           |
+| mqtt.kvrocks.cluster.nodes                     | kvrocks节点地址，示例`192.168.2.222:7003,192.168.2.222:7004`                               |                           |
+| mqtt.kvrocks.cluster.cluster.max-redirects     | kvrocks集群执行命令时的最大重定向次数                                                           |                          |
+| mqtt.kvrocks.pool.min-idle                     | kvrocks连接池中的最小空闲连接数                                                               |   12                         |
+| mqtt.kvrocks.pool.max-active                   | kvrocks连接池可以分配的最大连接数。使用负值表示无限制                                            |  12                         |
+| mqtt.kvrocks.pool.max-idle                     | kvrocks连接池中的最大空闲连接数。使用负值表示无限制                                             |  12                         |
+| mqtt.kvrocks.pool.max-wait                     | kvrocks连接池资源耗尽时，连接尝试分配阻塞时间，超时即抛出异常。使用负值无限期阻塞                     |  -1                         |
+| mqtt.kvrocks.pool.time-between-eviction-runs   | kvrocks连接池空闲对象逐出器线程的运行间隔时间。当为正值时，启动空闲对象逐出器线程，否则不执行空闲对象逐出                     |  -1                         |
 
 ## 🌞 参考&借鉴
 - [mica-mqtt](https://gitee.com/596392912/mica-mqtt)

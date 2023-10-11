@@ -2,6 +2,9 @@ server:
   port: ${mqtt.server.api-port:8083}
 spring:
   redis:
+    cluster:
+      nodes: ${mqtt.kvrocks.cluster.nodes}
+      max-redirects: ${mqtt.kvrocks.cluster.max-redirects}
     host: ${mqtt.kvrocks.host:127.0.0.1}
     port: ${mqtt.kvrocks.port:6666}
     lettuce:
@@ -11,3 +14,4 @@ spring:
         max-idle: ${mqtt.kvrocks.pool.max-idle:12}
         max-wait: ${mqtt.kvrocks.pool.max-wait:-1}
         time-between-eviction-runs: ${mqtt.kvrocks.pool.time-between-eviction-runs:-1}
+    password: ${mqtt.kvrocks.password}
