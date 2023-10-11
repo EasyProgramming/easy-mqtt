@@ -15,6 +15,7 @@
             <fileMode>0755</fileMode>
             <directoryMode>0755</directoryMode>
             <outputDirectory>bin</outputDirectory>
+            <lineEnding>unix</lineEnding>
         </fileSet>
 
         <fileSet>
