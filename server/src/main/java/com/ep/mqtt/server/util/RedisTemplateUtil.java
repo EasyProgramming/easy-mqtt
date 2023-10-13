@@ -52,6 +52,7 @@ public class RedisTemplateUtil {
         do {
             ScanArgs scanArgs = ScanArgs.Builder.limit(size).match(pattern);
             keyScanCursor = redisCommands.scan(cursor, scanArgs);
+            cursor = ScanCursor.of(keyScanCursor.getCursor());
             List<String> matchKeyList = keyScanCursor.getKeys();
             if (CollectionUtils.isEmpty(matchKeyList)){
                break;
@@ -76,6 +77,7 @@ public class RedisTemplateUtil {
         do {
             ScanArgs scanArgs = ScanArgs.Builder.limit(size).match(pattern);
             mapScanCursor = redisHashCommands.hscan(hashKey, cursor, scanArgs);
+            cursor = ScanCursor.of(mapScanCursor.getCursor());
             Map<String, String> matchMap = mapScanCursor.getMap();
             if (CollectionUtils.isEmpty(matchMap)){
                 break;
@@ -100,15 +102,17 @@ public class RedisTemplateUtil {
         do {
             ScanArgs scanArgs = ScanArgs.Builder.limit(size).match(pattern);
             valueScanCursor = redisSetCommands.sscan(setKey, cursor, scanArgs);
+            cursor = ScanCursor.of(valueScanCursor.getCursor());
             List<String> matchKeyList = valueScanCursor.getValues();
-            if (!CollectionUtils.isEmpty(matchKeyList)){
-                if (consumer != null){
-                    for (String matchKey : matchKeyList){
-                        consumer.accept(matchKey);
-                    }
-                }
-                allMatchKeySet.addAll(matchKeyList);
+            if (CollectionUtils.isEmpty(matchKeyList)){
+                break;
             }
+            if (consumer != null){
+                for (String matchKey : matchKeyList){
+                    consumer.accept(matchKey);
+                }
+            }
+            allMatchKeySet.addAll(matchKeyList);
         } while (!valueScanCursor.isFinished());
         return allMatchKeySet;
     }
