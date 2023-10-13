@@ -58,9 +58,8 @@ public class RetainMessageStore {
 
     private void initData() {
         RedisTemplateUtil.hScan(stringRedisTemplate, StoreKey.RETAIN_MESSAGE_KEY.formatKey(), "*", 10000, entry -> {
-            String topic = new String(entry.getKey(), StandardCharsets.UTF_8);
-            MessageVo messageVo =
-                JsonUtil.string2Obj(new String(entry.getValue(), StandardCharsets.UTF_8), MessageVo.class);
+            String topic = entry.getKey();
+            MessageVo messageVo = JsonUtil.string2Obj(entry.getValue(), MessageVo.class);
             addRetainMessage(topic, messageVo);
         });
     }
@@ -94,9 +93,8 @@ public class RetainMessageStore {
             log.info("start check retain message data, {}", DateFormatUtils.format(startDate, "yyyy-MM-dd HH:mm:ss"));
             Set<String> remoteTopicSet = Sets.newHashSet();
             RedisTemplateUtil.hScan(stringRedisTemplate, StoreKey.RETAIN_MESSAGE_KEY.formatKey(), "*", 10000, entry -> {
-                String topic = new String(entry.getKey(), StandardCharsets.UTF_8);
-                MessageVo messageVo =
-                    JsonUtil.string2Obj(new String(entry.getValue(), StandardCharsets.UTF_8), MessageVo.class);
+                String topic = entry.getKey();
+                MessageVo messageVo = JsonUtil.string2Obj(entry.getValue(), MessageVo.class);
                 if (getRetainMessage(topic) == null) {
                     addRetainMessage(topic, messageVo);
                 }

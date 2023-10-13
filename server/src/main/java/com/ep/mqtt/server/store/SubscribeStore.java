@@ -131,8 +131,8 @@ public class SubscribeStore {
                 // 按远程topicFilter查询client，按client查询是否存在，不存在则删除远程，删除本地
                 RedisTemplateUtil.scan(stringRedisTemplate, scanKey, 10000,
                     topicFilter -> RedisTemplateUtil.hScan(stringRedisTemplate, topicFilter, "*", 10000, entry -> {
-                        String clientId = new String(entry.getKey(), StandardCharsets.UTF_8);
-                        Integer qos = Integer.parseInt(new String(entry.getValue(), StandardCharsets.UTF_8));
+                        String clientId = entry.getKey();
+                        Integer qos = Integer.parseInt(entry.getValue());
                         String key = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId);
                         Boolean isKeyExist = stringRedisTemplate.hasKey(key);
                         if (isKeyExist == null || !isKeyExist) {

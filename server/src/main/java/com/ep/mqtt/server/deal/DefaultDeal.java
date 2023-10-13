@@ -365,7 +365,7 @@ public class DefaultDeal {
         WorkerThreadPool.execute((a) -> {
             String messageKey = StoreKey.MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
             RedisTemplateUtil.hScan(stringRedisTemplate, messageKey, "*", 10000, entry -> {
-                String messageJsonStr = new String(entry.getValue(), StandardCharsets.UTF_8);
+                String messageJsonStr = entry.getValue();
                 // 目前只有预设的数据为空字符串
                 if (StringUtils.isBlank(messageJsonStr)) {
                     return;
@@ -380,7 +380,7 @@ public class DefaultDeal {
         WorkerThreadPool.execute((a) -> {
             String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
             RedisTemplateUtil.hScan(stringRedisTemplate, recMessageKey, "*", 10000, entry -> {
-                String messageIdStr = new String(entry.getKey(), StandardCharsets.UTF_8);
+                String messageIdStr = entry.getKey();
                 // 目前只有预设的数据为空字符串
                 if (StringUtils.isBlank(messageIdStr)) {
                     return;
@@ -391,8 +391,7 @@ public class DefaultDeal {
         // 重发PubRel报文
         WorkerThreadPool.execute((a) -> {
             String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
-            RedisTemplateUtil.sScan(stringRedisTemplate, relMessageKey, "*", 10000, value -> {
-                String messageIdStr = new String(value, StandardCharsets.UTF_8);
+            RedisTemplateUtil.sScan(stringRedisTemplate, relMessageKey, "*", 10000, messageIdStr -> {
                 // 目前只有预设的数据为空字符串
                 if (StringUtils.isBlank(messageIdStr)) {
                     return;
