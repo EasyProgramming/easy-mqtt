@@ -12,9 +12,7 @@ mqtt:
     listener-pool-size: 10
     deal-message-thread-pool-size: 10
   kvrocks:
-    host: 127.0.0.1
-    port: 6666
-    password: ""
+    password:
     pool:
       min-idle: 12
       max-active: 12
@@ -22,5 +20,5 @@ mqtt:
       max-wait: -1
       time-between-eviction-runs: -1
     cluster:
-      nodes:
-      max-redirects:
+      nodes: 121.199.21.5:6666,47.98.117.35:6666
+      max-redirects: 2
