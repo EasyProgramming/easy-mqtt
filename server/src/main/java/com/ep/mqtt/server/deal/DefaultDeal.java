@@ -1,5 +1,20 @@
 package com.ep.mqtt.server.deal;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.stereotype.Component;
+
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.listener.msg.CleanExistSessionMsg;
 import com.ep.mqtt.server.listener.msg.ManageRetainMessageMsg;
@@ -18,26 +33,12 @@ import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.core.*;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
-import org.springframework.stereotype.Component;
-
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * 请求broker
@@ -117,7 +118,6 @@ public class DefaultDeal {
             @SuppressWarnings({"unchecked", "NullableProblems"})
             @Override
             public Void execute(RedisOperations operations) throws DataAccessException {
-                operations.multi();
                 // 移除会话信息
                 operations.opsForHash().delete(StoreKey.CLIENT_INFO_KEY.formatKey(), clientId);
                 // 移除订阅关系
@@ -126,9 +126,8 @@ public class DefaultDeal {
                         clientId);
                 }
                 // 移除客户端的相关数据
-                operations.delete(Sets.newHashSet(clientTopicFilterKey, messageKey, recMessageKey, relMessageKey, genMessageIdKey));
-                // 移除message id生成进度
-                operations.exec();
+                operations.delete(
+                    Sets.newHashSet(clientTopicFilterKey, messageKey, recMessageKey, relMessageKey, genMessageIdKey));
                 return null;
             }
         });
@@ -145,7 +144,7 @@ public class DefaultDeal {
         manageTopicFilterMsg.setClientId(clientId);
         manageTopicFilterMsg.setTopicVoList(topicVoList);
         manageTopicFilterMsg.setManageType(ManageTopicFilterMsg.ManageType.SUBSCRIBE.getKey());
-        stringRedisTemplate.executePipelined((RedisCallback<Void>)connection -> {
+        stringRedisTemplate.execute((RedisCallback<Void>)connection -> {
             for (TopicVo topicVo : topicVoList) {
                 String clientTopicFilterKey = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId);
                 connection.hSet(clientTopicFilterKey.getBytes(), topicVo.getTopicFilter().getBytes(),
@@ -171,7 +170,7 @@ public class DefaultDeal {
         manageTopicFilterMsg.setTopicVoList(topicVoList);
         stringRedisTemplate.convertAndSend(ChannelKey.MANAGE_TOPIC_FILTER.getKey(),
             JsonUtil.obj2String(manageTopicFilterMsg));
-        stringRedisTemplate.executePipelined((RedisCallback<Void>)connection -> {
+        stringRedisTemplate.execute((RedisCallback<Void>)connection -> {
             for (TopicVo topicVo : topicVoList) {
                 connection.hDel((StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId)).getBytes(),
                     topicVo.getTopicFilter().getBytes());
@@ -236,8 +235,7 @@ public class DefaultDeal {
                         break;
                 }
             }
-            if (batchSendMessageVoList.size() >= 100
-                || i == matchMap.entrySet().size() - 1) {
+            if (batchSendMessageVoList.size() >= 100 || i == matchMap.entrySet().size() - 1) {
                 stringRedisTemplate.convertAndSend(ChannelKey.SEND_MESSAGE.getKey(),
                     JsonUtil.obj2String(batchSendMessageVoList));
                 batchSendMessageVoList.clear();
@@ -247,10 +245,9 @@ public class DefaultDeal {
     }
 
     private Integer genMessageId(String clientId) {
-        String genMessageIdKey =StoreKey.GEN_MESSAGE_ID_KEY.formatKey(clientId);
+        String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(clientId);
         RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.GEN_MESSAGE_ID, Long.class);
-        Long messageId = stringRedisTemplate.execute(redisScript,
-                Lists.newArrayList(genMessageIdKey));
+        Long messageId = stringRedisTemplate.execute(redisScript, Lists.newArrayList(genMessageIdKey));
         if (messageId != null) {
             return Math.toIntExact(messageId % 65535 + 1);
         }
@@ -338,8 +335,7 @@ public class DefaultDeal {
     public void saveRelMessage(String clientId, Integer messageId) {
         String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(clientId);
         RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.SAVE_REL_MESSAGE);
-        stringRedisTemplate.execute(redisScript, Lists.newArrayList(relMessageKey),
-            String.valueOf(messageId));
+        stringRedisTemplate.execute(redisScript, Lists.newArrayList(relMessageKey), String.valueOf(messageId));
     }
 
     public void delRelMessage(String clientId, Integer messageId) {
@@ -406,7 +402,6 @@ public class DefaultDeal {
             @SuppressWarnings({"unchecked", "NullableProblems"})
             @Override
             public Void execute(RedisOperations operations) throws DataAccessException {
-                operations.multi();
                 Duration expireTime = Duration.ofMillis(session.getDataExpireTimeMilliSecond());
                 String clientTopicFilterKey = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(session.getClientId());
                 operations.opsForHash().put(clientTopicFilterKey, "", "");
@@ -425,7 +420,6 @@ public class DefaultDeal {
                     operations.expire(relMessageKey, expireTime);
                     operations.expire(genMessageIdKey, expireTime);
                 }
-                operations.exec();
                 return null;
             }
         });
