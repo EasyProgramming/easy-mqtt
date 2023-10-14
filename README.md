@@ -16,22 +16,19 @@
 - [ ] 提供发送消息的api；支持一对一、一对多的方式；支持qos=0、1的等级（待实现）
 ## 🚀 快速开始
 
-启动kvrocks
+启动kvrocks集群
 
 1.点击 [这里](https://github.com/EasyProgramming/easy-mqtt/releases) 下载最新的已编译的kvrocks压缩包
 
-2.将包解压缩后，进入解压缩后的目录，执行如下命令
+2.点击 [这里](https://kvrocks.apache.org/docs/getting-started) 阅读官网文档，搭建kvrocks集群
 
-```shell script
-sh bin/kvrocks -c bin/kvrocks.conf
-```
 ---
 
 启动easy mqtt
 
 1.点击 [这里](https://github.com/EasyProgramming/easy-mqtt/releases) 下载最新的已编译的easy mqtt压缩包
 
-2.将包解压缩后，进入解压缩后的目录，执行如下命令：
+2.将包解压缩后，进入解压缩后的目录，更改conf目录下的配置，然后执行如下命令：
 ```shell script
 sh bin/start.sh -c conf/conf.yml
 ```
@@ -88,9 +85,9 @@ cpu
 
 发送消息场景
 
-2w个客户端订阅同一个topic，使用另外50个客户端分别向这个topic发送一条qos=1消息，tps=50*2w/处理时间；kvrocks的配置为4c8g
+2w个客户端订阅同一个topic，使用另外300个客户端分别向这个topic发送一条qos=1消息，tps=300*2w/处理时间；kvrocks的配置为两台2c5g组成的集群
 
-处理时间为?s，tps为?w
+处理时间为195s，tps约为3w
 
 ## 👍 开源推荐
 - `Apache Kvrocks` Apache Kvrocks是一个分布式键值NoSQL数据库，使用RocksDB作为存储引擎，兼容Redis协议：[https://github.com/apache/kvrocks](https://github.com/apache/kvrocks)
