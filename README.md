@@ -83,9 +83,11 @@ cpu
 
 发送消息场景
 
-2w个客户端订阅同一个topic，使用另外300个客户端分别向这个topic发送一条qos=1消息，tps=300*2w/处理时间；kvrocks的配置为两台2c5g组成的集群
+2w个客户端订阅同一个topic，使用另外300个客户端分别向这个topic发送一条qos=1消息，tps=300*2w/处理时间；kvrocks的配置为两台2c4g组成的集群
 
-处理时间为195s，tps约为3w
+处理时间为`195s`，tps约为`3w`
+
+ps：若kvrocks集群配置提高，tps可再次提高
 
 ## 👍 开源推荐
 - `Apache Kvrocks` Apache Kvrocks是一个分布式键值NoSQL数据库，使用RocksDB作为存储引擎，兼容Redis协议：[https://github.com/apache/kvrocks](https://github.com/apache/kvrocks)
