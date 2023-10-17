@@ -118,8 +118,6 @@ public class DefaultDeal {
             @SuppressWarnings({"unchecked", "NullableProblems"})
             @Override
             public Void execute(RedisOperations operations) throws DataAccessException {
-                // 移除会话信息
-                operations.opsForHash().delete(StoreKey.CLIENT_INFO_KEY.formatKey(), clientId);
                 // 移除订阅关系
                 for (Map.Entry<String, Integer> clientTopicFilter : clientTopicFilterMap.entrySet()) {
                     operations.opsForHash().delete((StoreKey.TOPIC_FILTER_KEY.formatKey(clientTopicFilter.getKey())),
@@ -128,6 +126,8 @@ public class DefaultDeal {
                 // 移除客户端的相关数据
                 operations.delete(
                     Sets.newHashSet(clientTopicFilterKey, messageKey, recMessageKey, relMessageKey, genMessageIdKey));
+                // 移除会话信息
+                operations.opsForHash().delete(StoreKey.CLIENT_INFO_KEY.formatKey(), clientId);
                 return null;
             }
         });
