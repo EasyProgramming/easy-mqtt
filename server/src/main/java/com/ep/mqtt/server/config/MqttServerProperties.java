@@ -2,7 +2,10 @@ package com.ep.mqtt.server.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 /**
  * @author zbz
@@ -12,6 +15,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "mqtt.server")
 public class MqttServerProperties {
+
+    /**
+     * 服务器模式
+     * @see com.ep.mqtt.server.metadata.MqttServerMode
+     */
+    private String mode;
 
     /**
      * 是否开启Epoll模式, linux下建议开启
@@ -62,4 +71,84 @@ public class MqttServerProperties {
      * 处理消息线程池的大小
      */
     private Integer dealMessageThreadPoolSize = Runtime.getRuntime().availableProcessors() * 3;
+
+    /**
+     * 阿里云相关配置
+     */
+    private Aliyun aliyun;
+
+    /**
+     * 阿里云相关配置
+     */
+    @Data
+    public static class Aliyun {
+
+        /**
+         * 授权方式
+         * @see com.ep.mqtt.server.metadata.AliyunAuthWay
+         */
+        private String authWay;
+
+        /**
+         * 数据流转
+         */
+        private DataTransfer dataTransfer;
+
+        /**
+         * 数据流转
+         */
+        @Data
+        public static class DataTransfer {
+
+            /**
+             * rocketmq相关配置
+             */
+            private RocketMq rocketMq;
+
+            /**
+             * <p>数据流入规则</p>
+             * <p>mq（fromTopic） -> mqtt（toTopic） -> 客户端</p>
+             */
+            private List<TopicMappingRule> inputRuleList;
+
+            /**
+             * <p>数据流出规则</p>
+             * <p>客户端 -> mqtt（fromTopic） -> mq（toTopic）</p>
+             */
+            private List<TopicMappingRule> outputRuleList;
+
+        }
+
+        /**
+         * rocketmq相关配置
+         */
+        @Data
+        public static class RocketMq {
+
+            /**
+             * rocketmq的nameServer（多个地址，用英文逗号进行拼接）
+             */
+            private String nameServer;
+
+        }
+
+        /**
+         * topic映射规则
+         */
+        @Data
+        public static class TopicMappingRule {
+
+            /**
+             * 来源topic
+             */
+            private String fromTopic;
+
+            /**
+             * 目标topic
+             */
+            private String toTopic;
+
+        }
+
+    }
 }
