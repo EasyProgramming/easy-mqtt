@@ -1,5 +1,6 @@
 mqtt:
   server:
+    mode: aliyun
     is-use-epoll: false
     is-open-ssl: false
     ssl-certificate-password: ""
@@ -11,6 +12,19 @@ mqtt:
     authentication-url: ""
     listener-pool-size: 10
     deal-message-thread-pool-size: 10
+    aliyun:
+      auth-way: token
+      data-transfer:
+        rocket-mq:
+          name-server: 127.0.0.1
+        input-rule-list:
+          - from-topic: a
+            to-topic: b
+          - from-topic: c
+            to-topic: d
+        output-uule-list:
+          - from-topic: a
+            to-topic: b
   kvrocks:
     password:
     pool:
@@ -22,3 +36,4 @@ mqtt:
     cluster:
       nodes: 121.199.21.5:6666,47.98.117.35:6666
       max-redirects: 2
+

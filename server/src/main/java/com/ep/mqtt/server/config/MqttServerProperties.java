@@ -126,7 +126,7 @@ public class MqttServerProperties {
         public static class RocketMq {
 
             /**
-             * rocketmq的nameServer（多个地址，用英文逗号进行拼接）
+             * rocketmq的nameServer（多个地址，用英文分号进行拼接）
              */
             private String nameServer;
 
