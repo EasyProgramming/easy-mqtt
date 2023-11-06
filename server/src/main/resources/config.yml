@@ -22,7 +22,7 @@ mqtt:
             to-topic: b
           - from-topic: c
             to-topic: d
-        output-uule-list:
+        output-rule-list:
           - from-topic: a
             to-topic: b
   kvrocks:
