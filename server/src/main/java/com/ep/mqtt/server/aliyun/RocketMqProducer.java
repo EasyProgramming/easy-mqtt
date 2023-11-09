@@ -1,15 +1,10 @@
 package com.ep.mqtt.server.aliyun;
 
-import org.apache.rocketmq.client.exception.MQBrokerException;
-import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.client.producer.DefaultMQProducer;
-import org.apache.rocketmq.client.producer.SendResult;
-import org.apache.rocketmq.common.message.Message;
-import org.apache.rocketmq.remoting.common.RemotingHelper;
-import org.apache.rocketmq.remoting.exception.RemotingException;
+import com.aliyun.openservices.ons.api.*;
+import com.ep.mqtt.server.config.MqttServerProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
-import java.io.UnsupportedEncodingException;
+import java.util.Properties;
 
 /**
  * @author zbz
@@ -18,21 +13,26 @@ import java.io.UnsupportedEncodingException;
 @ConditionalOnProperty(prefix = "mqtt.server.aliyun.data-transfer.rocket-mq", value = "name-server")
 public class RocketMqProducer {
 
-    private final DefaultMQProducer defaultProducer;
+    private final Producer producer;
 
-    public RocketMqProducer(String producerGroup, String nameServer) throws MQClientException {
-        defaultProducer = new DefaultMQProducer(producerGroup);
-        defaultProducer.setNamesrvAddr(nameServer);
-        defaultProducer.start();
+    public RocketMqProducer(MqttServerProperties.Aliyun.RocketMq rocketMq) {
+        Properties properties = new Properties();
+        properties.put(PropertyKeyConst.AccessKey, rocketMq.getAccessKey());
+        properties.put(PropertyKeyConst.SecretKey, rocketMq.getSecretKey());
+        properties.setProperty(PropertyKeyConst.SendMsgTimeoutMillis, "3000");
+        properties.put(PropertyKeyConst.NAMESRV_ADDR, rocketMq.getNameserverAddr());
+        producer = ONSFactory.createProducer(properties);
+        producer.start();
     }
 
     public void destroy(){
-        defaultProducer.shutdown();
+        producer.shutdown();
     }
 
-    public SendResult send(String topic, String body) throws UnsupportedEncodingException, InterruptedException, RemotingException, MQClientException, MQBrokerException {
-        Message msg = new Message(topic, "*", body.getBytes(RemotingHelper.DEFAULT_CHARSET));
-        return defaultProducer.send(msg);
+    public SendResult send(String topic, String body, Properties properties) {
+        Message msg = new Message(topic, "*", body.getBytes());
+        msg.setUserProperties(properties);
+        return producer.send(msg);
     }
 
 }

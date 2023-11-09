@@ -107,15 +107,15 @@ public class MqttServerProperties {
 
             /**
              * <p>数据流入规则</p>
-             * <p>mq（fromTopic） -> mqtt（toTopic） -> 客户端</p>
+             * <p>mq（rocketMqTopic） -> mqtt（mqttTopic） -> 客户端</p>
              */
-            private List<TopicMappingRule> inputRuleList;
+            private List<TopicMapRule> inputRuleList;
 
             /**
              * <p>数据流出规则</p>
-             * <p>客户端 -> mqtt（fromTopic） -> mq（toTopic）</p>
+             * <p>客户端 -> mqtt（mqttTopic） -> mq（rocketMqTopic）</p>
              */
-            private List<TopicMappingRule> outputRuleList;
+            private List<TopicMapRule> outputRuleList;
 
         }
 
@@ -126,9 +126,24 @@ public class MqttServerProperties {
         public static class RocketMq {
 
             /**
-             * rocketmq的nameServer（多个地址，用英文分号进行拼接）
+             * 消息队列RocketMQ版控制台创建的Group ID
              */
-            private String nameServer;
+            private String groupId;
+
+            /**
+             * AccessKey ID，阿里云身份验证标识
+             */
+            private String accessKey;
+
+            /**
+             * AccessKey Secret，阿里云身份验证密钥
+             */
+            private String secretKey;
+
+            /**
+             * 设置TCP接入域名，进入消息队列RocketMQ版控制台实例详情页面的接入点区域查看
+             */
+            private String nameserverAddr;
 
         }
 
@@ -136,18 +151,49 @@ public class MqttServerProperties {
          * topic映射规则
          */
         @Data
-        public static class TopicMappingRule {
+        public static class TopicMapRule {
 
             /**
-             * 来源topic
+             * rocketmq topic
              */
-            private String fromTopic;
+            private RocketMqTopic rocketMqTopic;
 
             /**
-             * 目标topic
+             * mqtt topic
              */
-            private String toTopic;
+            private MqttTopic mqttTopic;
 
+        }
+
+        /**
+         * rocketmq topic
+         */
+        @Data
+        public static class RocketMqTopic {
+
+            /**
+             * topic
+             */
+            private String topic;
+
+            /**
+             * 消息类型
+             * @see com.ep.mqtt.server.metadata.RocketMqMessageType
+             */
+            private String messageType;
+
+        }
+
+        /**
+         * mqtt topic
+         */
+        @Data
+        public static class MqttTopic {
+
+            /**
+             * topic
+             */
+            private String topic;
         }
 
     }

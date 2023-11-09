@@ -16,15 +16,27 @@ mqtt:
       auth-way: token
       data-transfer:
         rocket-mq:
-          name-server: 127.0.0.1
+          group-id: xxx
+          access-key: xxx
+          secret-key: xxx
+          nameserver-addr: 127.0.0.1
         input-rule-list:
-          - from-topic: a
-            to-topic: b
-          - from-topic: c
-            to-topic: d
+          - rocket-mq-topic:
+              topic: a
+              messageType: normal
+            mqttTopic:
+              topic: b
+          - rocket-mq-topic:
+              topic: c
+              messageType: normal
+            mqttTopic:
+              topic: d
         output-rule-list:
-          - from-topic: a
-            to-topic: b
+          - rocket-mq-topic:
+              topic: e
+              messageType: normal
+            mqttTopic:
+              topic: f
   kvrocks:
     password:
     pool:

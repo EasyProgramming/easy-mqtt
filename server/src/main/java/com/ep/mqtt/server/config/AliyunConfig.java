@@ -1,7 +1,6 @@
 package com.ep.mqtt.server.config;
 
 import com.ep.mqtt.server.aliyun.RocketMqProducer;
-import org.apache.rocketmq.client.exception.MQClientException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +21,8 @@ public class AliyunConfig {
 
     @ConditionalOnProperty(prefix = "mqtt.server.aliyun.data-transfer.rocket-mq", value = "name-server")
     @Bean(destroyMethod = "destroy")
-    public RocketMqProducer rocketMqProducer() throws MQClientException {
-        return new RocketMqProducer("easy-mqtt", mqttServerProperties.getAliyun().getDataTransfer().getRocketMq().getNameServer());
+    public RocketMqProducer rocketMqProducer() {
+        return new RocketMqProducer(mqttServerProperties.getAliyun().getDataTransfer().getRocketMq());
     }
 
 }
