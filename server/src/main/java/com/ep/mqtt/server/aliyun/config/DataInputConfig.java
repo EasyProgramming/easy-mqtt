@@ -1,6 +1,7 @@
-package com.ep.mqtt.server.config;
+package com.ep.mqtt.server.aliyun.config;
 
-import com.ep.mqtt.server.aliyun.DataInputProcessor;
+import com.ep.mqtt.server.aliyun.core.DataInputProcessor;
+import com.ep.mqtt.server.config.MqttServerProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

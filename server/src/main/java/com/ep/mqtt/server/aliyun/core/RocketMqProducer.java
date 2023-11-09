@@ -1,4 +1,4 @@
-package com.ep.mqtt.server.aliyun;
+package com.ep.mqtt.server.aliyun.core;
 
 import com.aliyun.openservices.ons.api.*;
 import com.ep.mqtt.server.config.MqttServerProperties;

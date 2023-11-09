@@ -5,7 +5,7 @@ package com.ep.mqtt.server.metadata;
  * @author zbz
  * @date 2023/11/7 18:04
  */
-public enum RocketMqMessagePropertiesKey {
+public enum RocketMqMessagePropertyKey {
 
     /**
      * QoS
@@ -27,7 +27,7 @@ public enum RocketMqMessagePropertiesKey {
 
     private final String desc;
 
-    RocketMqMessagePropertiesKey(String key, String desc) {
+    RocketMqMessagePropertyKey(String key, String desc) {
         this.key = key;
         this.desc = desc;
     }

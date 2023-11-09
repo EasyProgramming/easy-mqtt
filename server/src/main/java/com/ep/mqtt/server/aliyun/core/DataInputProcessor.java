@@ -1,8 +1,8 @@
-package com.ep.mqtt.server.aliyun;
+package com.ep.mqtt.server.aliyun.core;
 
 import com.aliyun.openservices.ons.api.*;
 import com.ep.mqtt.server.config.MqttServerProperties;
-import com.ep.mqtt.server.metadata.RocketMqMessagePropertiesKey;
+import com.ep.mqtt.server.metadata.RocketMqMessagePropertyKey;
 import com.ep.mqtt.server.metadata.RocketMqMessageType;
 import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.vo.MessageVo;
@@ -70,7 +70,7 @@ public class DataInputProcessor {
         MessageVo messageVo = new MessageVo();
         messageVo.setIsRetained(YesOrNo.NO.getValue());
         messageVo.setIsDup(false);
-        String qosStr = msg.getUserProperties(RocketMqMessagePropertiesKey.QOS_LEVEL.getKey());
+        String qosStr = msg.getUserProperties(RocketMqMessagePropertyKey.QOS_LEVEL.getKey());
         if (StringUtils.isNotBlank(qosStr)){
             messageVo.setFromQos(Integer.valueOf(qosStr));
         }
@@ -78,7 +78,7 @@ public class DataInputProcessor {
             messageVo.setFromQos(1);
         }
         String topic = topicMapRule.getMqttTopic().getTopic();
-        String subTopic = msg.getUserProperties(RocketMqMessagePropertiesKey.MQTT_SECOND_TOPIC.getKey());
+        String subTopic = msg.getUserProperties(RocketMqMessagePropertyKey.MQTT_SECOND_TOPIC.getKey());
         if (StringUtils.isNotBlank(subTopic)){
             topic = topic + subTopic;
         }
