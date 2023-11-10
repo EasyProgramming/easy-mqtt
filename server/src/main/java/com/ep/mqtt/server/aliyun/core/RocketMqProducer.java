@@ -10,7 +10,6 @@ import java.util.Properties;
  * @author zbz
  * @date 2023/11/6 14:58
  */
-@ConditionalOnProperty(prefix = "mqtt.server.aliyun.data-transfer.rocket-mq", value = "name-server")
 public class RocketMqProducer {
 
     private final Producer producer;

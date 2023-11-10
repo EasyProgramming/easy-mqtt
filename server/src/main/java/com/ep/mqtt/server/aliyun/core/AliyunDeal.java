@@ -4,8 +4,6 @@ import com.ep.mqtt.server.deal.Deal;
 import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -14,8 +12,6 @@ import java.util.List;
  * @date 2023/11/9 14:59
  */
 @Slf4j
-@ConditionalOnProperty(prefix = "mqtt.server", value = "mode", havingValue = "aliyun")
-@Component
 public class AliyunDeal extends Deal {
 
     @Override

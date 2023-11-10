@@ -1,6 +1,6 @@
 mqtt:
   server:
-    mode: aliyun
+    mode: default
     is-use-epoll: false
     is-open-ssl: false
     ssl-certificate-password: ""

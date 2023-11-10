@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.aliyun.config;
 
+import com.ep.mqtt.server.aliyun.core.AliyunDeal;
 import com.ep.mqtt.server.aliyun.core.RocketMqProducer;
 import com.ep.mqtt.server.config.MqttServerProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +14,9 @@ import org.springframework.context.annotation.Import;
  * @date 2023/11/6 14:29
  */
 @ConditionalOnProperty(prefix = "mqtt.server", value = "mode", havingValue = "aliyun")
-@Import({DataInputConfig.class})
+@Import({DataInputConfig.class, AliyunDeal.class})
 @Configuration
-public class AliyunConfig {
+public class AliyunModeConfig {
 
     @Autowired
     private MqttServerProperties mqttServerProperties;
