@@ -26,7 +26,7 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttPublishMessage mqttPublishMessage) {
         MessageVo messageVo = convert(mqttPublishMessage, channelHandlerContext);
-        WorkerThreadPool.dealMessage((a)-> defaultDeal.dealMessage(messageVo), ()->{
+        WorkerThreadPool.dealMessage((a)-> deal.dealMessage(messageVo), ()->{
             switch (mqttPublishMessage.fixedHeader().qosLevel()) {
                 case AT_LEAST_ONCE:
                     MqttMessage publishAckMessage =

@@ -31,7 +31,7 @@ public class UnSubscribeMqttProcessor extends AbstractMqttProcessor<MqttUnsubscr
             topicVo.setTopicFilter(topicFilter);
             topicVoList.add(topicVo);
         }
-        defaultDeal.unSubscribe(clientId, topicVoList);
+        deal.unSubscribe(clientId, topicVoList);
         // 发送取消订阅确认消息
         int subMessageId = mqttMessage.variableHeader().messageId();
         MqttUnsubAckMessage unsubAckMessage = MqttMessageBuilders.unsubAck().packetId(subMessageId).build();

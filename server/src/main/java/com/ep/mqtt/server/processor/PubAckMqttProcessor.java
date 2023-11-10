@@ -21,7 +21,7 @@ public class PubAckMqttProcessor extends AbstractMqttProcessor<MqttPubAckMessage
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttPubAckMessage mqttPubAckMessage) {
-        WorkerThreadPool.dealMessage((a)-> defaultDeal.delMessage(NettyUtil.getClientId(channelHandlerContext),
+        WorkerThreadPool.dealMessage((a)-> deal.delMessage(NettyUtil.getClientId(channelHandlerContext),
                 mqttPubAckMessage.variableHeader().messageId()), null, channelHandlerContext);
     }
 

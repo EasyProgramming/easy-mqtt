@@ -2,7 +2,7 @@ package com.ep.mqtt.server.processor;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.ep.mqtt.server.deal.DefaultDeal;
+import com.ep.mqtt.server.deal.Deal;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class AbstractMqttProcessor<T extends MqttMessage> {
 
     @Autowired
-    protected DefaultDeal defaultDeal;
+    protected Deal deal;
 
     /**
      * 入口

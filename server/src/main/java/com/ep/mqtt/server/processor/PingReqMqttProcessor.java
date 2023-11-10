@@ -26,7 +26,7 @@ public class PingReqMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
         if (session == null) {
             throw new RuntimeException("session not exist");
         }
-        defaultDeal.refreshData(session);
+        deal.refreshData(session);
         channelHandlerContext.writeAndFlush(MqttMessage.PINGRESP);
     }
 

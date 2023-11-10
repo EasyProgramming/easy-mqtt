@@ -11,8 +11,6 @@ import com.google.common.collect.Lists;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,7 +33,7 @@ public class SubscribeMqttProcessor extends AbstractMqttProcessor<MqttSubscribeM
             topicVo.setTopicFilter(mqttTopicSubscription.topicName());
             topicVoList.add(topicVo);
         }
-        List<Integer> subscribeResultList = defaultDeal.subscribe(clientId, topicVoList);
+        List<Integer> subscribeResultList = deal.subscribe(clientId, topicVoList);
         List<TopicVo> successSubscribeTopicList = Lists.newArrayList();
         List<MqttQoS> mqttQosList = Lists.newArrayList();
         for (int i = 0; i < subscribeResultList.size(); i++) {
@@ -51,7 +49,7 @@ public class SubscribeMqttProcessor extends AbstractMqttProcessor<MqttSubscribeM
         MqttSubAckMessage mqttSubAckMessage =
             MqttMessageBuilders.subAck().addGrantedQoses(qoses).packetId(subMessageId).build();
         channelHandlerContext.writeAndFlush(mqttSubAckMessage);
-        WorkerThreadPool.execute(event -> defaultDeal.sendTopicRetainMessage(clientId, successSubscribeTopicList));
+        WorkerThreadPool.execute(event -> deal.sendTopicRetainMessage(clientId, successSubscribeTopicList));
     }
 
     @Override

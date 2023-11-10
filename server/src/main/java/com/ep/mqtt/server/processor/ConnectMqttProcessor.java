@@ -41,22 +41,22 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
                     false, true);
                 return;
             }
-            if (!defaultDeal.authentication(mqttConnectMessage)) {
+            if (!deal.authentication(mqttConnectMessage)) {
                 // 认证失败，返回错误的ack消息
                 sendConnectAck(channelHandlerContext,
                     MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD, false, true);
                 return;
             }
             int keepAliveTimeSeconds = keepAlive(channelHandlerContext, mqttConnectMessage);
-            ClientInfoVo clientInfo = defaultDeal.getClientInfo(clientIdentifier);
+            ClientInfoVo clientInfo = deal.getClientInfo(clientIdentifier);
             boolean isCleanSession = mqttConnectMessage.variableHeader().isCleanSession();
             boolean sessionPresent = false;
             if (clientInfo != null) {
                 if (isCleanSession) {
                     // 清除之前的数据
-                    defaultDeal.clearClientData(clientIdentifier);
+                    deal.clearClientData(clientIdentifier);
                 } else {
-                    defaultDeal.reConnect(clientInfo, channelHandlerContext);
+                    deal.reConnect(clientInfo, channelHandlerContext);
                     sessionPresent = true;
                 }
             } else {
@@ -65,7 +65,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
                     clientInfo = new ClientInfoVo();
                     clientInfo.setClientId(clientIdentifier);
                     clientInfo.setConnectTime(System.currentTimeMillis());
-                    defaultDeal.saveClientInfo(clientInfo);
+                    deal.saveClientInfo(clientInfo);
                 }
             }
             // 新建内存会话
@@ -77,9 +77,9 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             session.setKeepAliveTimeSeconds(keepAliveTimeSeconds);
             SessionManager.bind(clientIdentifier, session);
             // 踢出重复会话
-            defaultDeal.cleanExistSession(clientIdentifier, session.getSessionId());
+            deal.cleanExistSession(clientIdentifier, session.getSessionId());
             // 刷新数据
-            defaultDeal.refreshData(session);
+            deal.refreshData(session);
             sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, sessionPresent, false);
             log.info("client session id: [{}], client id: [{}] connect", session.getSessionId(), session.getClientId());
         } catch (Throwable throwable) {

@@ -2,7 +2,7 @@ package com.ep.mqtt.server.server;
 
 import com.ep.mqtt.server.codec.MqttWebSocketCodec;
 import com.ep.mqtt.server.config.MqttServerProperties;
-import com.ep.mqtt.server.deal.DefaultDeal;
+import com.ep.mqtt.server.deal.Deal;
 import com.ep.mqtt.server.handler.MqttMessageHandler;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
 import io.netty.bootstrap.ServerBootstrap;
@@ -53,7 +53,7 @@ public class MqttServer {
     private List<AbstractMqttProcessor<?>> abstractMqttProcessorList;
 
     @Autowired
-    private DefaultDeal defaultDeal;
+    private Deal deal;
 
     private EventLoopGroup bossGroup;
 
@@ -117,7 +117,7 @@ public class MqttServer {
                     channelPipeline.addLast("mqttDecoder", new MqttDecoder());
                     channelPipeline.addLast("mqttEncoder", MqttEncoder.INSTANCE);
                     channelPipeline.addLast("mqttMessageHandler",
-                        new MqttMessageHandler(abstractMqttProcessorList, defaultDeal));
+                        new MqttMessageHandler(abstractMqttProcessorList, deal));
                 }
             });
         tcpChannel = sb.bind(mqttServerProperties.getTcpPort()).sync().channel();
@@ -147,7 +147,7 @@ public class MqttServer {
                     channelPipeline.addLast("mqttDecoder", new MqttDecoder());
                     channelPipeline.addLast("mqttEncoder", MqttEncoder.INSTANCE);
                     channelPipeline.addLast("mqttMessageHandler",
-                        new MqttMessageHandler(abstractMqttProcessorList, defaultDeal));
+                        new MqttMessageHandler(abstractMqttProcessorList, deal));
                 }
             });
         websocketChannel = sb.bind(mqttServerProperties.getWebsocketPort()).sync().channel();

@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.ep.mqtt.server.deal.DefaultDeal;
+import com.ep.mqtt.server.deal.Deal;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
@@ -29,14 +29,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage> {
 
-    private final DefaultDeal defaultDeal;
+    private final Deal deal;
 
     private final Map<MqttMessageType, AbstractMqttProcessor<?>> abstractMqttProcessorMap;
 
-    public MqttMessageHandler(List<AbstractMqttProcessor<?>> abstractMqttProcessorList, DefaultDeal defaultDeal) {
+    public MqttMessageHandler(List<AbstractMqttProcessor<?>> abstractMqttProcessorList, Deal deal) {
         abstractMqttProcessorMap = abstractMqttProcessorList.stream()
             .collect(Collectors.toMap(AbstractMqttProcessor::getMqttMessageType, b -> b));
-        this.defaultDeal = defaultDeal;
+        this.deal = deal;
     }
 
     @Override
@@ -78,7 +78,7 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         if (StringUtils.isNotBlank(clientId)) {
             Session session = SessionManager.get(clientId);
             if (session.getIsCleanSession()) {
-                WorkerThreadPool.execute(promise -> defaultDeal.clearClientData(clientId));
+                WorkerThreadPool.execute(promise -> deal.clearClientData(clientId));
             }
             SessionManager.unbind(clientId);
         }

@@ -1,6 +1,6 @@
 package com.ep.mqtt.server.aliyun.core;
 
-import com.ep.mqtt.server.deal.DefaultDeal;
+import com.ep.mqtt.server.deal.Deal;
 import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,7 @@ import java.util.List;
 @Slf4j
 @ConditionalOnProperty(prefix = "mqtt.server", value = "mode", havingValue = "aliyun")
 @Component
-public class AliyunDeal extends DefaultDeal {
+public class AliyunDeal extends Deal {
 
     @Override
     public void sendMessage(MessageVo messageVo) {
