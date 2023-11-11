@@ -136,6 +136,9 @@ public class Deal {
     }
 
     public List<Integer> subscribe(String clientId, List<TopicVo> topicVoList) {
+        for (TopicVo topicVo : topicVoList) {
+            TopicUtil.validateTopicFilter(topicVo.getTopicFilter());
+        }
         List<Integer> subscribeResultList = Lists.newArrayList();
         ManageTopicFilterMsg manageTopicFilterMsg = new ManageTopicFilterMsg();
         manageTopicFilterMsg.setClientId(clientId);

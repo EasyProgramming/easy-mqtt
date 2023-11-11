@@ -34,12 +34,4 @@ public class AliyunDeal extends Deal {
         super.sendMessage(messageVo, isP2P);
     }
 
-    @Override
-    public List<Integer> subscribe(String clientId, List<TopicVo> topicVoList) {
-        // TODO: 2023/11/9 过滤特殊的p2p topic
-
-        return super.subscribe(clientId, topicVoList);
-    }
-
-
 }
