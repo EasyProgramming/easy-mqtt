@@ -1,9 +1,11 @@
 package com.ep.mqtt.server.aliyun.core;
 
 import com.ep.mqtt.server.deal.Deal;
+import com.ep.mqtt.server.util.TopicUtil;
 import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 
@@ -14,11 +16,22 @@ import java.util.List;
 @Slf4j
 public class AliyunDeal extends Deal {
 
+    private static final Integer P2P_PARAMS_SIZE = 3;
+
+    private static final String P2P_FLAG = "/p2p/";
+
     @Override
     public void sendMessage(MessageVo messageVo) {
-        // TODO: 2023/11/9 截取p2p消息
-
-        super.sendMessage(messageVo);
+        boolean isP2P = false;
+        String[] splitResult = StringUtils.split(messageVo.getTopic(), P2P_FLAG);
+        if (splitResult.length == P2P_PARAMS_SIZE){
+            if (!StringUtils.containsAny(splitResult[0], TopicUtil.TOPIC_SPLIT_FLAG)){
+                isP2P = true;
+                messageVo.setTopic(splitResult[0]);
+                messageVo.setToClientId(splitResult[2]);
+            }
+        }
+        super.sendMessage(messageVo, isP2P);
     }
 
     @Override

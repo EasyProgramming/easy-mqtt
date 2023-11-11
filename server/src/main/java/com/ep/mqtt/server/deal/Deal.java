@@ -17,6 +17,7 @@ import com.ep.mqtt.server.vo.ClientInfoVo;
 import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
@@ -178,10 +179,17 @@ public class Deal {
 
     }
 
-    public void sendMessage(MessageVo messageVo) {
+    public void sendMessage(MessageVo messageVo, boolean isP2P) {
         long startTime = System.currentTimeMillis();
-        // 先根据topic做匹配
-        Map<String, Integer> matchMap = subscribeStore.searchSubscribe(messageVo.getTopic());
+        Map<String, Integer> matchMap;
+        if (isP2P){
+            matchMap = Maps.newHashMap();
+            matchMap.put(messageVo.getToClientId(), messageVo.getFromQos());
+        }
+        else {
+            // 先根据topic做匹配
+            matchMap = subscribeStore.searchSubscribe(messageVo.getTopic());
+        }
         List<MessageVo> batchSendMessageVoList = new ArrayList<>();
         ArrayList<Map.Entry<String, Integer>> matchClientList = Lists.newArrayList(matchMap.entrySet());
         for (int i = 0; i < matchClientList.size(); i++) {
@@ -219,6 +227,15 @@ public class Deal {
         log.info("complete send message, cost {}ms", System.currentTimeMillis() - startTime);
     }
 
+    public void sendMessage(MessageVo messageVo) {
+        sendMessage(messageVo, false);
+    }
+
+    /**
+     * 根据客户端id生成有序的messageId
+     * @param clientId 客户端id
+     * @return messageId，如果客户端不存在，则返回null
+     */
     private Integer genMessageId(String clientId) {
         String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(clientId);
         RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.GEN_MESSAGE_ID, Long.class);
