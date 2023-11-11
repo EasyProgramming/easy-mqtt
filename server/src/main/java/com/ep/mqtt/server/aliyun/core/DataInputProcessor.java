@@ -2,6 +2,7 @@ package com.ep.mqtt.server.aliyun.core;
 
 import com.aliyun.openservices.ons.api.*;
 import com.ep.mqtt.server.config.MqttServerProperties;
+import com.ep.mqtt.server.deal.Deal;
 import com.ep.mqtt.server.metadata.RocketMqMessagePropertyKey;
 import com.ep.mqtt.server.metadata.RocketMqMessageType;
 import com.ep.mqtt.server.metadata.YesOrNo;
@@ -23,7 +24,10 @@ public class DataInputProcessor {
 
     private final List<Consumer> consumerList = Lists.newArrayList();
 
-    public DataInputProcessor(List<MqttServerProperties.Aliyun.TopicMapRule> inputRuleList, MqttServerProperties.Aliyun.RocketMq rocketMq){
+    private final Deal deal;
+
+    public DataInputProcessor(List<MqttServerProperties.Aliyun.TopicMapRule> inputRuleList, MqttServerProperties.Aliyun.RocketMq rocketMq, Deal deal){
+        this.deal = deal;
         for (MqttServerProperties.Aliyun.TopicMapRule topicMapRule : inputRuleList){
             Properties properties = new Properties();
             properties.put(PropertyKeyConst.GROUP_ID, rocketMq.getGroupId());
@@ -62,8 +66,7 @@ public class DataInputProcessor {
 
     private void dealMsg(Message msg, MqttServerProperties.Aliyun.TopicMapRule topicMapRule){
         MessageVo messageVo = convert(msg, topicMapRule);
-        // 发送消息
-
+        deal.sendMessage(messageVo);
     }
 
     private MessageVo convert(Message msg, MqttServerProperties.Aliyun.TopicMapRule topicMapRule){

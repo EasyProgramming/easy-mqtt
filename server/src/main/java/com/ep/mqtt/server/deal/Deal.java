@@ -178,27 +178,6 @@ public class Deal {
 
     }
 
-    public void dealMessage(MessageVo messageVo) {
-        Integer isRetain = messageVo.getIsRetained();
-        MqttQoS fromMqttQoS = MqttQoS.valueOf(messageVo.getFromQos());
-        String payload = messageVo.getPayload();
-        if (YesOrNo.YES.getValue().equals(isRetain)) {
-            // qos == 0 || payload 为零字节，清除该主题下的保留消息
-            if (MqttQoS.AT_MOST_ONCE == fromMqttQoS || StringUtils.isBlank(payload)) {
-                delTopicRetainMessage(messageVo.getTopic());
-            }
-            // 存储保留消息
-            else {
-                saveTopicRetainMessage(messageVo);
-            }
-        }
-        if (MqttQoS.EXACTLY_ONCE.equals(fromMqttQoS)) {
-            saveRecMessage(messageVo);
-            return;
-        }
-        sendMessage(messageVo);
-    }
-
     public void sendMessage(MessageVo messageVo) {
         long startTime = System.currentTimeMillis();
         // 先根据topic做匹配
