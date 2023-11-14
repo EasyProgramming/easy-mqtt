@@ -55,7 +55,6 @@ public class AliyunModeConfig {
         }
     }
 
-    @ConditionalOnProperty(prefix = "mqtt.server.aliyun.rocket-mq", value = "name-server")
     @Bean(destroyMethod = "destroy")
     public RocketMqProducer rocketMqProducer() {
         return new RocketMqProducer(mqttServerProperties.getAliyun().getRocketMq());

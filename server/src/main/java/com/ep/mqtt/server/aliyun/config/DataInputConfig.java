@@ -31,7 +31,7 @@ public class DataInputConfig {
     public void init() {
         // 根据配置启动数据流入的consumer
         dataInputProcessor = new DataInputProcessor(mqttServerProperties.getAliyun().getDataTransfer().getInputRuleList(),
-                mqttServerProperties.getAliyun().getDataTransfer().getRocketMq(), deal);
+                mqttServerProperties.getAliyun().getRocketMq(), deal);
         dataInputProcessor.start();
     }
 
