@@ -24,7 +24,7 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttPublishMessage mqttPublishMessage) {
         MessageVo messageVo = convert(mqttPublishMessage, channelHandlerContext);
-        WorkerThreadPool.dealMessage((a)-> dealMessage(messageVo), ()->{
+        WorkerThreadPool.dealMessage((a)-> deal.publish(messageVo), ()->{
             switch (mqttPublishMessage.fixedHeader().qosLevel()) {
                 case AT_LEAST_ONCE:
                     MqttMessage publishAckMessage =
@@ -38,27 +38,6 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
                     break;
             }
         }, channelHandlerContext);
-    }
-
-    private void dealMessage(MessageVo messageVo) {
-        Integer isRetain = messageVo.getIsRetained();
-        MqttQoS fromMqttQoS = MqttQoS.valueOf(messageVo.getFromQos());
-        String payload = messageVo.getPayload();
-        if (YesOrNo.YES.getValue().equals(isRetain)) {
-            // qos == 0 || payload 为零字节，清除该主题下的保留消息
-            if (MqttQoS.AT_MOST_ONCE == fromMqttQoS || StringUtils.isBlank(payload)) {
-                deal.delTopicRetainMessage(messageVo.getTopic());
-            }
-            // 存储保留消息
-            else {
-                deal.saveTopicRetainMessage(messageVo);
-            }
-        }
-        if (MqttQoS.EXACTLY_ONCE.equals(fromMqttQoS)) {
-            deal.saveRecMessage(messageVo);
-            return;
-        }
-        deal.sendMessage(messageVo);
     }
 
     private MessageVo convert(MqttPublishMessage mqttPublishMessage, ChannelHandlerContext channelHandlerContext) {

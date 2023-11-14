@@ -14,12 +14,12 @@ mqtt:
     deal-message-thread-pool-size: 10
     aliyun:
       auth-way: token
+      rocket-mq:
+        group-id: xxx
+        access-key: xxx
+        secret-key: xxx
+        nameserver-addr: 127.0.0.1
       data-transfer:
-        rocket-mq:
-          group-id: xxx
-          access-key: xxx
-          secret-key: xxx
-          nameserver-addr: 127.0.0.1
         input-rule-list:
           - rocket-mq-topic:
               topic: a

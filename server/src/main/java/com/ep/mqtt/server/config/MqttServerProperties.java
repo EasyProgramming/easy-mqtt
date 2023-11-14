@@ -5,6 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -20,7 +23,7 @@ public class MqttServerProperties {
      * 服务器模式
      * @see com.ep.mqtt.server.metadata.MqttServerMode
      */
-    private String mode;
+    private String mode = "default";
 
     /**
      * 是否开启Epoll模式, linux下建议开启
@@ -87,12 +90,21 @@ public class MqttServerProperties {
          * 授权方式
          * @see com.ep.mqtt.server.metadata.AliyunAuthWay
          */
+        @NotBlank(message = "auth-way")
         private String authWay;
 
         /**
          * 数据流转
          */
+        @Valid
         private DataTransfer dataTransfer;
+
+
+        /**
+         * rocketmq相关配置
+         */
+        @NotNull(message = "rocket-mq")
+        private RocketMq rocketMq;
 
         /**
          * 数据流转
@@ -101,20 +113,17 @@ public class MqttServerProperties {
         public static class DataTransfer {
 
             /**
-             * rocketmq相关配置
-             */
-            private RocketMq rocketMq;
-
-            /**
              * <p>数据流入规则</p>
              * <p>mq（rocketMqTopic） -> mqtt（mqttTopic） -> 客户端</p>
              */
+            @Valid
             private List<TopicMapRule> inputRuleList;
 
             /**
              * <p>数据流出规则</p>
              * <p>客户端 -> mqtt（mqttTopic） -> mq（rocketMqTopic）</p>
              */
+            @Valid
             private List<TopicMapRule> outputRuleList;
 
         }
@@ -128,21 +137,25 @@ public class MqttServerProperties {
             /**
              * 消息队列RocketMQ版控制台创建的Group ID
              */
+            @NotBlank(message = "group-id")
             private String groupId;
 
             /**
              * AccessKey ID，阿里云身份验证标识
              */
+            @NotBlank(message = "access-key")
             private String accessKey;
 
             /**
              * AccessKey Secret，阿里云身份验证密钥
              */
+            @NotBlank(message = "secret-key")
             private String secretKey;
 
             /**
              * 设置TCP接入域名，进入消息队列RocketMQ版控制台实例详情页面的接入点区域查看
              */
+            @NotBlank(message = "nameserver-addr")
             private String nameserverAddr;
 
         }
@@ -156,11 +169,13 @@ public class MqttServerProperties {
             /**
              * rocketmq topic
              */
+            @NotNull(message = "rocket-mq-topic")
             private RocketMqTopic rocketMqTopic;
 
             /**
              * mqtt topic
              */
+            @NotNull(message = "mqtt-topic")
             private MqttTopic mqttTopic;
 
         }
@@ -174,12 +189,14 @@ public class MqttServerProperties {
             /**
              * topic
              */
+            @NotBlank(message = "topic")
             private String topic;
 
             /**
              * 消息类型
              * @see com.ep.mqtt.server.metadata.RocketMqMessageType
              */
+            @NotBlank(message = "message-type")
             private String messageType;
 
         }
@@ -193,6 +210,7 @@ public class MqttServerProperties {
             /**
              * topic
              */
+            @NotBlank(message = "topic")
             private String topic;
         }
 
