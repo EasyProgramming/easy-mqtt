@@ -306,6 +306,9 @@ public class Deal {
 
     }
 
+    public void pubRel(Integer messageId, String clientId){
+    }
+
     public void saveRecMessage(MessageVo messageVo) {
         String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(messageVo.getFromClientId());
         RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.SAVE_REC_MESSAGE);

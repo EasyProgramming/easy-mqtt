@@ -47,12 +47,24 @@ public class AliyunDeal extends Deal {
             super.publish(messageVo);
             return;
         }
-        Properties properties = new Properties();
-        properties.setProperty(RocketMqMessagePropertyKey.QOS_LEVEL.getKey(), String.valueOf(messageVo.getFromQos()));
-        // 因为rmq和mqtt的topic是全匹配，且rmq的topic不含有/，所以不会有子级的topic
-        properties.setProperty(RocketMqMessagePropertyKey.MQTT_SECOND_TOPIC.getKey(), "");
-        properties.setProperty(RocketMqMessagePropertyKey.CLIENT_ID.getKey(), messageVo.getFromClientId());
-        rocketMqProducer.send(outputTopic, messageVo.getPayload(), properties);
+        sendToMq(outputTopic, messageVo);
+    }
+
+
+    @Override
+    public void pubRel(Integer messageId, String clientId){
+        MessageVo messageVo = getRecMessage(clientId, messageId);
+        if (messageVo == null) {
+            return;
+        }
+        String outputTopic = getOutputTopic(messageVo.getTopic());
+        if (StringUtils.isBlank(outputTopic)){
+            sendMessage(messageVo);
+        }
+        else {
+            sendToMq(outputTopic, messageVo);
+        }
+        delRecMessage(clientId, messageId);
     }
 
     private String getOutputTopic(String mqttTopic){
@@ -68,6 +80,15 @@ public class AliyunDeal extends Deal {
             }
         }
         return "";
+    }
+
+    private void sendToMq(String outputTopic, MessageVo messageVo){
+        Properties properties = new Properties();
+        properties.setProperty(RocketMqMessagePropertyKey.QOS_LEVEL.getKey(), String.valueOf(messageVo.getFromQos()));
+        // 因为rmq和mqtt的topic是全匹配，且rmq的topic不含有/，所以不会有子级的topic
+        properties.setProperty(RocketMqMessagePropertyKey.MQTT_SECOND_TOPIC.getKey(), "");
+        properties.setProperty(RocketMqMessagePropertyKey.CLIENT_ID.getKey(), messageVo.getFromClientId());
+        rocketMqProducer.send(outputTopic, messageVo.getPayload(), properties);
     }
 
 }

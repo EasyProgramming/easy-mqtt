@@ -23,12 +23,7 @@ public class PubRelMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
         Integer messageId = getMessageId(mqttMessage);
         String clientId = NettyUtil.getClientId(channelHandlerContext);
         WorkerThreadPool.dealMessage((a)-> {
-            MessageVo messageVo = deal.getRecMessage(clientId, messageId);
-            if (messageVo == null) {
-                return;
-            }
-            deal.sendMessage(messageVo);
-            deal.delRecMessage(clientId, messageId);
+            deal.pubRel(messageId, clientId);
         }, ()-> sendPubComp(channelHandlerContext, messageId), channelHandlerContext);
     }
 
