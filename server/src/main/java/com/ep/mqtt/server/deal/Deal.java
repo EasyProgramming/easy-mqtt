@@ -400,7 +400,30 @@ public class Deal {
             @SuppressWarnings({"unchecked", "NullableProblems"})
             @Override
             public Void execute(RedisOperations operations) throws DataAccessException {
-                Duration expireTime = Duration.ofMillis(session.getDataExpireTimeMilliSecond());
+                if (session.getIsCleanSession()) {
+                    Duration expireTime = Duration.ofMillis(session.getDataExpireTimeMilliSecond());
+                    String clientTopicFilterKey = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(session.getClientId());
+                    String messageKey = StoreKey.MESSAGE_KEY.formatKey(session.getClientId());
+                    String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(session.getClientId());
+                    String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(session.getClientId());
+                    String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(session.getClientId());
+                    operations.opsForValue().setIfAbsent(genMessageIdKey, "0");
+                    operations.expire(clientTopicFilterKey, expireTime);
+                    operations.expire(messageKey, expireTime);
+                    operations.expire(recMessageKey, expireTime);
+                    operations.expire(relMessageKey, expireTime);
+                    operations.expire(genMessageIdKey, expireTime);
+                }
+                return null;
+            }
+        });
+    }
+
+    public void presetData(Session session) {
+        stringRedisTemplate.execute(new SessionCallback<Void>() {
+            @SuppressWarnings({"unchecked", "NullableProblems"})
+            @Override
+            public Void execute(RedisOperations operations) throws DataAccessException {
                 String clientTopicFilterKey = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(session.getClientId());
                 operations.opsForHash().put(clientTopicFilterKey, "", "");
                 String messageKey = StoreKey.MESSAGE_KEY.formatKey(session.getClientId());
@@ -411,13 +434,6 @@ public class Deal {
                 operations.opsForSet().add(relMessageKey, "");
                 String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(session.getClientId());
                 operations.opsForValue().setIfAbsent(genMessageIdKey, "0");
-                if (session.getIsCleanSession()) {
-                    operations.expire(clientTopicFilterKey, expireTime);
-                    operations.expire(messageKey, expireTime);
-                    operations.expire(recMessageKey, expireTime);
-                    operations.expire(relMessageKey, expireTime);
-                    operations.expire(genMessageIdKey, expireTime);
-                }
                 return null;
             }
         });

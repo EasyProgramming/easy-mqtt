@@ -79,6 +79,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             // 踢出重复会话
             deal.cleanExistSession(clientIdentifier, session.getSessionId());
             // 刷新数据
+            deal.presetData(session);
             deal.refreshData(session);
             sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, sessionPresent, false);
             log.info("client session id: [{}], client id: [{}] connect", session.getSessionId(), session.getClientId());
