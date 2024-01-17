@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 /**
+ * // TODO: 2024/1/17 优化：不再在本地缓存订阅数据，从kv查询，先取全量topic，本地匹配，然后使用scan取topic下的client
  * @author zbz
  * @date 2023/8/17 15:31
  */
