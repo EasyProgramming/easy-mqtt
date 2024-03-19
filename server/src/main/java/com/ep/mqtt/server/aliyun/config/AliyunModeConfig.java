@@ -2,6 +2,7 @@ package com.ep.mqtt.server.aliyun.config;
 
 import com.ep.mqtt.server.aliyun.core.AliyunDeal;
 import com.ep.mqtt.server.aliyun.core.RocketMqProducer;
+import com.ep.mqtt.server.aliyun.core.TokenManage;
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.util.ValidationUtil;
 import com.google.common.collect.Lists;
@@ -24,7 +25,7 @@ import java.util.List;
  */
 @Slf4j
 @ConditionalOnProperty(prefix = "mqtt.server", value = "mode", havingValue = "aliyun")
-@Import({DataInputConfig.class, AliyunDeal.class})
+@Import({DataInputConfig.class, AliyunDeal.class, TokenManage.class})
 @Configuration
 public class AliyunModeConfig {
 

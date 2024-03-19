@@ -10,15 +10,18 @@ public enum AliyunAuthWay {
     /**
      * token
      */
-    TOKEN("token", "token鉴权模式"),;
+    TOKEN("token", "Token", "token鉴权模式"),;
 
     private final String key;
 
     private final String desc;
 
-    AliyunAuthWay(String key, String desc) {
+    private final String aliyunKey;
+
+    AliyunAuthWay(String key, String aliyunKey, String desc) {
         this.key = key;
         this.desc = desc;
+        this.aliyunKey = aliyunKey;
     }
 
     public String getDesc() {
@@ -29,4 +32,7 @@ public enum AliyunAuthWay {
         return key;
     }
 
+    public String getAliyunKey() {
+        return aliyunKey;
+    }
 }

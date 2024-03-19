@@ -44,7 +44,13 @@ public enum StoreKey {
     /**
      * 存储生成消息messageId进度
      */
-    GEN_MESSAGE_ID_KEY("gen_message_id" + Constant.STORE_KEY_SPLIT + "%s", "string"),;
+    GEN_MESSAGE_ID_KEY("gen_message_id" + Constant.STORE_KEY_SPLIT + "%s", "string"),
+
+    /**
+     * 阿里云的客户端鉴权token
+     */
+    ALIYUN_CLIENT_AUTH_TOKEN_KEY("aliyun_client_auth_token" + Constant.STORE_KEY_SPLIT + "%s", "hash"),
+    ;
 
     private final String key;
 
