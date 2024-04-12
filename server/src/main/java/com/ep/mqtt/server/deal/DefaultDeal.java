@@ -17,16 +17,14 @@ import org.springframework.stereotype.Component;
 
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.listener.msg.CleanExistSessionMsg;
-import com.ep.mqtt.server.listener.msg.ManageRetainMessageMsg;
-import com.ep.mqtt.server.listener.msg.ManageTopicFilterMsg;
 import com.ep.mqtt.server.metadata.ChannelKey;
 import com.ep.mqtt.server.metadata.LuaScript;
 import com.ep.mqtt.server.metadata.StoreKey;
 import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.store.RetainMessageStore;
-import com.ep.mqtt.server.store.SubscribeStore;
+import com.ep.mqtt.server.store.TopicFilterStore;
+import com.ep.mqtt.server.store.TopicStore;
 import com.ep.mqtt.server.util.*;
 import com.ep.mqtt.server.vo.ClientInfoVo;
 import com.ep.mqtt.server.vo.MessageVo;
@@ -54,13 +52,13 @@ public class DefaultDeal {
     private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
-    private SubscribeStore subscribeStore;
+    private TopicFilterStore topicFilterStore;
 
     @Autowired
     private MqttServerProperties mqttServerProperties;
 
     @Autowired
-    private RetainMessageStore retainMessageStore;
+    private TopicStore topicStore;
 
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
@@ -92,17 +90,7 @@ public class DefaultDeal {
     }
 
     public void clearClientData(String clientId) {
-        cleanLocalData(clientId);
         cleanRemoteData(clientId);
-    }
-
-    private void cleanLocalData(String clientId) {
-        // 发送取消订阅广播
-        ManageTopicFilterMsg manageTopicFilterMsg = new ManageTopicFilterMsg();
-        manageTopicFilterMsg.setClientId(clientId);
-        manageTopicFilterMsg.setManageType(ManageTopicFilterMsg.ManageType.UN_SUBSCRIBE.getKey());
-        stringRedisTemplate.convertAndSend(ChannelKey.MANAGE_TOPIC_FILTER.getKey(),
-            JsonUtil.obj2String(manageTopicFilterMsg));
     }
 
     private void cleanRemoteData(String clientId) {
@@ -140,22 +128,26 @@ public class DefaultDeal {
 
     public List<Integer> subscribe(String clientId, List<TopicVo> topicVoList) {
         List<Integer> subscribeResultList = Lists.newArrayList();
-        ManageTopicFilterMsg manageTopicFilterMsg = new ManageTopicFilterMsg();
-        manageTopicFilterMsg.setClientId(clientId);
-        manageTopicFilterMsg.setTopicVoList(topicVoList);
-        manageTopicFilterMsg.setManageType(ManageTopicFilterMsg.ManageType.SUBSCRIBE.getKey());
-        stringRedisTemplate.execute((RedisCallback<Void>)connection -> {
-            for (TopicVo topicVo : topicVoList) {
-                String clientTopicFilterKey = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId);
-                connection.hSet(clientTopicFilterKey.getBytes(), topicVo.getTopicFilter().getBytes(),
-                    String.valueOf(topicVo.getQos()).getBytes());
-                connection.hSet((StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter())).getBytes(),
-                    clientId.getBytes(), String.valueOf(topicVo.getQos()).getBytes());
+        for (TopicVo topicVo : topicVoList) {
+            try {
+                TopicUtil.validateTopicFilter(topicVo.getTopicFilter());
+
+                stringRedisTemplate.opsForHash().put(StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId),
+                    topicVo.getTopicFilter(), String.valueOf(topicVo.getQos()));
+
+                stringRedisTemplate.opsForHash().put(StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter()),
+                    clientId, String.valueOf(topicVo.getQos()));
+
+                // 使用lua脚本，添加topic filter版本数据
+                RedisScript<Long> luaScript = new DefaultRedisScript<>(LuaScript.SAVE_TOPIC_FILTER_VERSION_DATA);
+                stringRedisTemplate.execute(luaScript,
+                    Lists.newArrayList(StoreKey.TOPIC_FILTER_VERSION_KEY.formatKey()), topicVo.getTopicFilter());
+
+                subscribeResultList.add(topicVo.getQos());
+            } catch (Exception e) {
+                subscribeResultList.add(MqttQoS.FAILURE.value());
             }
-            return null;
-        });
-        stringRedisTemplate.convertAndSend(ChannelKey.MANAGE_TOPIC_FILTER.getKey(),
-            JsonUtil.obj2String(manageTopicFilterMsg));
+        }
         return subscribeResultList;
     }
 
@@ -163,13 +155,7 @@ public class DefaultDeal {
         for (TopicVo topicVo : topicVoList) {
             TopicUtil.validateTopicFilter(topicVo.getTopicFilter());
         }
-        // 发送取消订阅广播
-        ManageTopicFilterMsg manageTopicFilterMsg = new ManageTopicFilterMsg();
-        manageTopicFilterMsg.setClientId(clientId);
-        manageTopicFilterMsg.setManageType(ManageTopicFilterMsg.ManageType.UN_SUBSCRIBE.getKey());
-        manageTopicFilterMsg.setTopicVoList(topicVoList);
-        stringRedisTemplate.convertAndSend(ChannelKey.MANAGE_TOPIC_FILTER.getKey(),
-            JsonUtil.obj2String(manageTopicFilterMsg));
+
         stringRedisTemplate.execute((RedisCallback<Void>)connection -> {
             for (TopicVo topicVo : topicVoList) {
                 connection.hDel((StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId)).getBytes(),
@@ -179,7 +165,6 @@ public class DefaultDeal {
             }
             return null;
         });
-
     }
 
     public void dealMessage(MessageVo messageVo) {
@@ -206,7 +191,7 @@ public class DefaultDeal {
     public void sendMessage(MessageVo messageVo) {
         long startTime = System.currentTimeMillis();
         // 先根据topic做匹配
-        Map<String, Integer> matchMap = subscribeStore.searchSubscribe(messageVo.getTopic());
+        Map<String, Integer> matchMap = topicFilterStore.searchSubscribe(messageVo.getTopic());
         List<MessageVo> batchSendMessageVoList = new ArrayList<>();
         ArrayList<Map.Entry<String, Integer>> matchClientList = Lists.newArrayList(matchMap.entrySet());
         for (int i = 0; i < matchClientList.size(); i++) {
@@ -259,36 +244,26 @@ public class DefaultDeal {
     }
 
     public void saveTopicRetainMessage(MessageVo messageVo) {
-        messageVo.setToQos(messageVo.getFromQos());
+        // 使用lua脚本，添加topic版本数据
+        RedisScript<Long> luaScript = new DefaultRedisScript<>(LuaScript.SAVE_TOPIC_VERSION_DATA);
+        stringRedisTemplate.execute(luaScript, Lists.newArrayList(StoreKey.TOPIC_VERSION_KEY.formatKey()),
+            messageVo.getTopic());
+
         // 远程存储保留消息
-        stringRedisTemplate.opsForHash().put(StoreKey.RETAIN_MESSAGE_KEY.formatKey(), messageVo.getTopic(),
+        messageVo.setToQos(messageVo.getFromQos());
+        stringRedisTemplate.opsForValue().set(StoreKey.RETAIN_MESSAGE_KEY.formatKey(messageVo.getTopic()),
             JsonUtil.obj2String(messageVo));
-        // 发送redis消息，存储本地保留消息
-        ManageRetainMessageMsg manageRetainMessageMsg = new ManageRetainMessageMsg();
-        manageRetainMessageMsg.setManageType(ManageRetainMessageMsg.ManageType.ADD.getKey());
-        manageRetainMessageMsg.setMessageVo(messageVo);
-        stringRedisTemplate.convertAndSend(ChannelKey.MANAGE_RETAIN_MESSAGE.getKey(),
-            JsonUtil.obj2String(manageRetainMessageMsg));
     }
 
     public void delTopicRetainMessage(String topic) {
         // 远程删除保留消息
-        stringRedisTemplate.opsForHash().delete(StoreKey.RETAIN_MESSAGE_KEY.formatKey(), topic);
-        // 发送redis消息，删除本地保留消息
-        ManageRetainMessageMsg manageRetainMessageMsg = new ManageRetainMessageMsg();
-        manageRetainMessageMsg.setManageType(ManageRetainMessageMsg.ManageType.REMOVE.getKey());
-        MessageVo messageVo = new MessageVo();
-        messageVo.setTopic(topic);
-        manageRetainMessageMsg.setMessageVo(messageVo);
-        stringRedisTemplate.convertAndSend(ChannelKey.MANAGE_RETAIN_MESSAGE.getKey(),
-            JsonUtil.obj2String(manageRetainMessageMsg));
+        stringRedisTemplate.delete(StoreKey.RETAIN_MESSAGE_KEY.formatKey(topic));
     }
 
     public void sendTopicRetainMessage(String clientId, List<TopicVo> successSubscribeTopicList) {
-        // 使用本地的保留消息进行匹配
         ChannelHandlerContext channelHandlerContext = SessionManager.get(clientId).getChannelHandlerContext();
         for (TopicVo topicVo : successSubscribeTopicList) {
-            List<MessageVo> messageVoList = retainMessageStore.getRetainMessage(topicVo.getTopicFilter());
+            List<MessageVo> messageVoList = topicStore.getRetainMessage(topicVo.getTopicFilter());
             for (MessageVo messageVo : messageVoList) {
                 messageVo.setToClientId(clientId);
                 Integer messageId = genMessageId(clientId);

@@ -68,6 +68,18 @@
             <artifactId>okhttp</artifactId>
         </dependency>
 
+        <dependency>
+            <artifactId>ratis-server</artifactId>
+            <groupId>org.apache.ratis</groupId>
+            <version>${ratis.version}</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>ratis-grpc</artifactId>
+            <groupId>org.apache.ratis</groupId>
+            <version>${ratis.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

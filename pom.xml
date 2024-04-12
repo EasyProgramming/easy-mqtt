@@ -24,6 +24,7 @@
         <guava.version>30.1.1-jre</guava.version>
         <vertx-core.version>4.4.0</vertx-core.version>
         <netty.version>4.1.89.Final</netty.version>
+        <ratis.version>3.0.1</ratis.version>
     </properties>
 
     <dependencies>

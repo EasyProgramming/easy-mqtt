@@ -38,6 +38,20 @@ public class LuaScript {
                                             "end";
 
 
+    /**
+     * 保存topic filter版本数据
+     */
+    public static String SAVE_TOPIC_FILTER_VERSION_DATA = "local increment = redis.call('INCR', KEYS[1])\n" +
+                                                          "local new_key = tostring(increment)\n" +
+                                                          "redis.call('SET', new_key, ARGV[1])";
+
+    /**
+     * 保存topic filter版本数据
+     */
+    public static String SAVE_TOPIC_VERSION_DATA = "local increment = redis.call('INCR', KEYS[1])\n" +
+                                                    "local new_key = tostring(increment)\n" +
+                                                    "redis.call('SET', new_key, ARGV[1])";
+
     // @formatter:on
 
 }

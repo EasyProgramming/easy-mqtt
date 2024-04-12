@@ -3,7 +3,7 @@ package com.ep.mqtt.server.listener;
 import com.ep.mqtt.server.listener.msg.ManageTopicFilterMsg;
 import com.ep.mqtt.server.metadata.ChannelKey;
 import com.ep.mqtt.server.metadata.LocalLockKey;
-import com.ep.mqtt.server.store.SubscribeStore;
+import com.ep.mqtt.server.store.SubscribeRelStore;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.vo.TopicVo;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ import org.springframework.util.CollectionUtils;
 public class ManageTopicFilterListener extends AbstractListener<ManageTopicFilterMsg> {
 
     @Autowired
-    private SubscribeStore subscribeStore;
+    private SubscribeRelStore subscribeRelStore;
 
     @Override
     public void deal(ManageTopicFilterMsg manageTopicFilterMsg) {
@@ -32,15 +32,15 @@ public class ManageTopicFilterListener extends AbstractListener<ManageTopicFilte
         synchronized (LocalLockKey.LOCK_MANAGE_TOPIC_FILTER.formatKey(manageTopicFilterMsg.getClientId()).intern()){
             if (ManageTopicFilterMsg.ManageType.SUBSCRIBE.getKey().equals(manageTopicFilterMsg.getManageType())) {
                 for (TopicVo topicVo : manageTopicFilterMsg.getTopicVoList()) {
-                    subscribeStore.subscribe(topicVo.getTopicFilter(), manageTopicFilterMsg.getClientId(),
+                    subscribeRelStore.subscribe(topicVo.getTopicFilter(), manageTopicFilterMsg.getClientId(),
                             topicVo.getQos());
                 }
             } else if (ManageTopicFilterMsg.ManageType.UN_SUBSCRIBE.getKey().equals(manageTopicFilterMsg.getManageType())) {
                 if (CollectionUtils.isEmpty(manageTopicFilterMsg.getTopicVoList())) {
-                    subscribeStore.unSubscribe(manageTopicFilterMsg.getClientId());
+                    subscribeRelStore.unSubscribe(manageTopicFilterMsg.getClientId());
                 } else {
                     for (TopicVo topicVo : manageTopicFilterMsg.getTopicVoList()) {
-                        subscribeStore.unSubscribe(topicVo.getTopicFilter(), manageTopicFilterMsg.getClientId());
+                        subscribeRelStore.unSubscribe(topicVo.getTopicFilter(), manageTopicFilterMsg.getClientId());
                     }
                 }
             }

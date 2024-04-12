@@ -1,8 +1,6 @@
 package com.ep.mqtt.server.config;
 
 import com.ep.mqtt.server.listener.CleanExistSessionListener;
-import com.ep.mqtt.server.listener.ManageRetainMessageListener;
-import com.ep.mqtt.server.listener.ManageTopicFilterListener;
 import com.ep.mqtt.server.listener.SendMessageListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -43,23 +41,9 @@ public class RedisConfig {
 
     @Bean
     public MyMessageListenerAdapter
-        manageTopicFilterListenerAdapter(ManageTopicFilterListener manageTopicFilterListener) {
-        return new MyMessageListenerAdapter(manageTopicFilterListener, "onMessage",
-            manageTopicFilterListener.getChannelKey().getKey());
-    }
-
-    @Bean
-    public MyMessageListenerAdapter
         cleanExistSessionListenerAdapter(CleanExistSessionListener cleanExistSessionListener) {
         return new MyMessageListenerAdapter(cleanExistSessionListener, "onMessage",
             cleanExistSessionListener.getChannelKey().getKey());
-    }
-
-    @Bean
-    public MyMessageListenerAdapter
-        manageRetainMessageListenerAdapter(ManageRetainMessageListener manageRetainMessageListener) {
-        return new MyMessageListenerAdapter(manageRetainMessageListener, "onMessage",
-            manageRetainMessageListener.getChannelKey().getKey());
     }
 
     @Bean
