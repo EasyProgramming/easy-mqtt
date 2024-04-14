@@ -23,6 +23,7 @@ import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.util.MD5FileUtil;
+import org.apache.ratis.util.TimeDuration;
 
 import com.ep.mqtt.server.metadata.RaftCommand;
 import com.ep.mqtt.server.raft.transfer.TransferData;
@@ -71,6 +72,12 @@ public class RaftStateMachine extends BaseStateMachine {
 
     private final SimpleStateMachineStorage storage = new SimpleStateMachineStorage();
 
+    private final TimeDuration simulatedSlowness;
+
+    public RaftStateMachine(TimeDuration simulatedSlowness) {
+        this.simulatedSlowness = simulatedSlowness.isPositive() ? simulatedSlowness : null;
+    }
+
     /**
      * 执行状态机前的方法，用于处理一些参数校验
      */
@@ -93,32 +100,44 @@ public class RaftStateMachine extends BaseStateMachine {
 
     @Override
     public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
-        TransferData transferData =
-            TransferData.convert(trx.getClientRequest().getMessage().getContent().toString(StandardCharsets.UTF_8));
-        RaftCommand command = RaftCommand.get(transferData.getCommand());
-        final TermIndex termIndex = TermIndex.valueOf(trx.getLogEntry());
 
-        synchronized (this) {
-            // noinspection ConstantConditions
-            switch (command) {
-                case ADD_TOPIC_FILTER:
-                    TopicFilterStore.add(transferData.getData());
-                    break;
-                case REMOVE_TOPIC_FILTER:
-                    TopicFilterStore.remove(transferData.getData());
-                    break;
-                case ADD_TOPIC:
-                    TopicStore.add(transferData.getData());
-                    break;
-                case REMOVE_TOPIC:
-                    TopicStore.remove(transferData.getData());
-                    break;
-                default:
-            }
+        executeCommand(
+            TransferData.convert(trx.getClientRequest().getMessage().getContent().toString(StandardCharsets.UTF_8)),
+            TermIndex.valueOf(trx.getLogEntry()));
 
-            updateLastAppliedTermIndex(termIndex);
-        }
         return CompletableFuture.completedFuture(Message.EMPTY);
+    }
+
+    private synchronized void executeCommand(TransferData transferData, TermIndex termIndex) {
+        if (simulatedSlowness != null) {
+            try {
+                simulatedSlowness.sleep();
+            } catch (InterruptedException e) {
+                log.warn("{}: get interrupted in simulated slowness sleep before apply transaction", this);
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        updateLastAppliedTermIndex(termIndex);
+
+        RaftCommand command = RaftCommand.get(transferData.getCommand());
+
+        // noinspection ConstantConditions
+        switch (command) {
+            case ADD_TOPIC_FILTER:
+                TopicFilterStore.add(transferData.getData());
+                break;
+            case REMOVE_TOPIC_FILTER:
+                TopicFilterStore.remove(transferData.getData());
+                break;
+            case ADD_TOPIC:
+                TopicStore.add(transferData.getData());
+                break;
+            case REMOVE_TOPIC:
+                TopicStore.remove(transferData.getData());
+                break;
+            default:
+        }
     }
 
     @Override
