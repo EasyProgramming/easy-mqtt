@@ -17,10 +17,9 @@ import org.springframework.stereotype.Component;
 
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.listener.msg.CleanExistSessionMsg;
-import com.ep.mqtt.server.metadata.ChannelKey;
-import com.ep.mqtt.server.metadata.LuaScript;
-import com.ep.mqtt.server.metadata.StoreKey;
-import com.ep.mqtt.server.metadata.YesOrNo;
+import com.ep.mqtt.server.metadata.*;
+import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
+import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.TopicFilterStore;
@@ -138,10 +137,8 @@ public class DefaultDeal {
                 stringRedisTemplate.opsForHash().put(StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter()),
                     clientId, String.valueOf(topicVo.getQos()));
 
-                // 使用lua脚本，添加topic filter版本数据
-                RedisScript<Long> luaScript = new DefaultRedisScript<>(LuaScript.SAVE_TOPIC_FILTER_VERSION_DATA);
-                stringRedisTemplate.execute(luaScript,
-                    Lists.newArrayList(StoreKey.TOPIC_FILTER_VERSION_KEY.formatKey()), topicVo.getTopicFilter());
+                EasyMqttRaftClient.syncSend(JsonUtil
+                    .obj2String(new TransferData(RaftCommand.ADD_TOPIC_FILTER.name(), topicVo.getTopicFilter())));
 
                 subscribeResultList.add(topicVo.getQos());
             } catch (Exception e) {
@@ -244,10 +241,8 @@ public class DefaultDeal {
     }
 
     public void saveTopicRetainMessage(MessageVo messageVo) {
-        // 使用lua脚本，添加topic版本数据
-        RedisScript<Long> luaScript = new DefaultRedisScript<>(LuaScript.SAVE_TOPIC_VERSION_DATA);
-        stringRedisTemplate.execute(luaScript, Lists.newArrayList(StoreKey.TOPIC_VERSION_KEY.formatKey()),
-            messageVo.getTopic());
+        EasyMqttRaftClient
+            .syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC.name(), messageVo.getTopic())));
 
         // 远程存储保留消息
         messageVo.setToQos(messageVo.getFromQos());

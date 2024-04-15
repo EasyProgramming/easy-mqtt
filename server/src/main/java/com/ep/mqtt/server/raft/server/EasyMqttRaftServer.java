@@ -24,6 +24,8 @@ public class EasyMqttRaftServer {
 
     private final RaftServer server;
 
+    private final RaftGroup raftGroup;
+
     public EasyMqttRaftServer(RaftPeer peer, File storageDir, RaftGroup raftGroup) throws IOException {
         final RaftProperties properties = new RaftProperties();
 
@@ -40,6 +42,8 @@ public class EasyMqttRaftServer {
 
         this.server = RaftServer.newBuilder().setGroup(raftGroup).setProperties(properties).setServerId(peer.getId())
             .setStateMachine(counterStateMachine).setOption(RaftStorage.StartupOption.RECOVER).build();
+
+        this.raftGroup = raftGroup;
     }
 
     public void start() throws IOException {
@@ -48,5 +52,9 @@ public class EasyMqttRaftServer {
 
     public void close() throws IOException {
         server.close();
+    }
+
+    public RaftGroup getRaftGroup() {
+        return raftGroup;
     }
 }

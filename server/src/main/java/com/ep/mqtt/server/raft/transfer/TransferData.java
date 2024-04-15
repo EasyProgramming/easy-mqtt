@@ -15,8 +15,12 @@ public class TransferData {
 
     private String data;
 
+    public TransferData(String command, String data) {
+        this.command = command;
+        this.data = data;
+    }
+
     public static TransferData convert(String jsonStr) {
         return JsonUtil.string2Obj(jsonStr, TransferData.class);
     }
-
 }

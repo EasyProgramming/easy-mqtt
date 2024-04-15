@@ -46,25 +46,6 @@ public enum StoreKey {
      */
     GEN_MESSAGE_ID_KEY("gen_message_id" + Constant.STORE_KEY_SPLIT + "%s", "string"),
 
-    /**
-     * topic filter 版本号
-     */
-    TOPIC_FILTER_VERSION_KEY("topic_filter_version", "string"),
-
-    /**
-     * topic filter 版本数据
-     */
-    TOPIC_FILTER_VERSION_DATA_KEY("topic_filter_version_data" + Constant.STORE_KEY_SPLIT + "%s", "string"),
-
-    /**
-     * topic 版本号
-     */
-    TOPIC_VERSION_KEY("topic_version", "string"),
-
-    /**
-     * topic 版本数据
-     */
-    TOPIC_VERSION_DATA_KEY("topic_version_data" + Constant.STORE_KEY_SPLIT + "%s", "string"),
     ;
 
     private final String key;
