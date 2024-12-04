@@ -25,6 +25,7 @@
         <vertx-core.version>4.4.0</vertx-core.version>
         <netty.version>4.1.89.Final</netty.version>
         <ratis.version>3.0.1</ratis.version>
+        <mybatis-plus-boot-starter.version>3.5.7</mybatis-plus-boot-starter.version>
     </properties>
 
     <dependencies>
