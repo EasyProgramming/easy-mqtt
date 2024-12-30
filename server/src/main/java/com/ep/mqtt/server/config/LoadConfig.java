@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.config;
 
+import com.ep.mqtt.server.metadata.Constant;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.context.annotation.Bean;
@@ -20,11 +21,10 @@ public class LoadConfig {
     public PropertySourcesPlaceholderConfigurer mqttConfig() throws MalformedURLException {
         PropertySourcesPlaceholderConfigurer configurer = new PropertySourcesPlaceholderConfigurer();
         YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
-        String configFile = System.getenv("CONFIG_FILE");
-        if (StringUtils.isBlank(configFile)){
+        if (StringUtils.isBlank(Constant.CONFIG_FILE_PATH)){
             throw new IllegalArgumentException("need set config file path");
         }
-        yaml.setResources(new FileUrlResource(configFile));
+        yaml.setResources(new FileUrlResource(Constant.CONFIG_FILE_PATH));
         if (yaml.getObject() == null){
             throw new IllegalArgumentException("parse config file fail");
         }
