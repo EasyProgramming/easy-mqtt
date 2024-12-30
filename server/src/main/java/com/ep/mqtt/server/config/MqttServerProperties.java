@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.config;
 
+import com.ep.mqtt.server.metadata.RunMode;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -62,4 +63,36 @@ public class MqttServerProperties {
      * 处理消息线程池的大小
      */
     private Integer dealMessageThreadPoolSize = Runtime.getRuntime().availableProcessors() * 3;
+
+    /**
+     * 运行模式
+     * @see com.ep.mqtt.server.metadata.RunMode
+     */
+    private String runMode = RunMode.STANDALONE.getCode();
+
+    /**
+     * 数据库配置，只在集群模式下生效，目前只支持mysql
+     */
+    private Db db;
+
+    @Data
+    public static class Db {
+
+        /**
+         * 数据库地址
+         */
+        private String url;
+
+        /**
+         * 账号
+         */
+        private String username;
+
+        /**
+         * 密码
+         */
+        private String password;
+
+    }
+
 }
