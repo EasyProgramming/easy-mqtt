@@ -46,7 +46,7 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
         MessageVo messageVo = new MessageVo();
         messageVo.setFromClientId(NettyUtil.getClientId(channelHandlerContext));
         messageVo.setFromMessageId(mqttPublishMessage.variableHeader().packetId());
-        messageVo.setIsRetained(YesOrNo.valueOf(mqttPublishMessage.fixedHeader().isRetain()).getValue());
+        messageVo.setIsRetained(YesOrNo.valueOf(mqttPublishMessage.fixedHeader().isRetain()).getNumber());
         byte[] data = new byte[mqttPublishMessage.payload().readableBytes()];
         mqttPublishMessage.payload().getBytes(mqttPublishMessage.payload().readerIndex(), data);
         messageVo.setPayload(new String(data));

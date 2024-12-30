@@ -2,28 +2,44 @@ package com.ep.mqtt.server.metadata;
 
 /**
  * @author zbz
- * @date 2023/7/29 11:44
+ * @date 2024/12/30 18:00
  */
-public enum YesOrNo {
+public enum YesOrNo implements BaseEnum<String> {
+    /**
+     * 是
+     */
+    YES("Y", "是", 1),
 
     /**
-     * yes
+     * 否
      */
-    YES(1),
+    NO("N", "否", 0),
+    ;
 
-    /**
-     * no
-     */
-    NO(0);
+    private final String code;
 
-    private final Integer value;
+    private final String desc;
 
-    YesOrNo(Integer value) {
-        this.value = value;
+    private final Integer number;
+
+    YesOrNo(String code, String desc, Integer number){
+        this.code = code;
+        this.desc = desc;
+        this.number = number;
     }
 
-    public Integer getValue() {
-        return value;
+    @Override
+    public String getCode() {
+        return code;
+    }
+
+    @Override
+    public String getDesc() {
+        return desc;
+    }
+
+    public Integer getNumber() {
+        return number;
     }
 
     public static YesOrNo valueOf(Boolean value) {
@@ -37,6 +53,7 @@ public enum YesOrNo {
         if (value == null) {
             return null;
         }
-        return YES.getValue().equals(value);
+        return YES.getNumber().equals(value);
     }
+
 }

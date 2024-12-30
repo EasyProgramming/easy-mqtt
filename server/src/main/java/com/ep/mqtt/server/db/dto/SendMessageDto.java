@@ -2,6 +2,8 @@ package com.ep.mqtt.server.db.dto;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.YesOrNo;
 import lombok.Data;
 
 /**
@@ -14,13 +16,13 @@ public class SendMessageDto {
     @TableId
     private Long id;
 
-    private Integer receiveQos;
+    private Qos receiveQos;
 
     private String receiveMessageId;
 
     private String fromClientId;
 
-    private Integer sendQos;
+    private Qos sendQos;
 
     private String topic;
 
@@ -30,11 +32,11 @@ public class SendMessageDto {
 
     private String payload;
 
-    private String isReceivePuback;
+    private YesOrNo isReceivePuback;
 
-    private String isReceivePubrec;
+    private YesOrNo isReceivePubrec;
 
-    private String isReceivePubcomp;
+    private YesOrNo isReceivePubcomp;
 
     private Integer validTime;
 

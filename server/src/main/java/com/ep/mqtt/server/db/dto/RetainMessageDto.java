@@ -2,6 +2,7 @@ package com.ep.mqtt.server.db.dto;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.ep.mqtt.server.metadata.Qos;
 import lombok.Data;
 
 /**
@@ -16,7 +17,7 @@ public class RetainMessageDto {
 
     private String payload;
 
-    private Integer receiveQos;
+    private Qos receiveQos;
 
     private String topic;
 

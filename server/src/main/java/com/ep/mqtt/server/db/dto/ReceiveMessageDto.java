@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.YesOrNo;
 import lombok.Data;
 
 /**
@@ -16,7 +18,7 @@ public class ReceiveMessageDto {
     @TableId
     private Long id;
 
-    private Integer receiveQos;
+    private Qos receiveQos;
 
     private String topic;
 
@@ -26,13 +28,13 @@ public class ReceiveMessageDto {
 
     private String payload;
 
-    private String isSendPuback;
+    private YesOrNo isSendPuback;
 
-    private String isReceivePubrel;
+    private YesOrNo isReceivePubrel;
 
-    private String isSendPubcomp;
+    private YesOrNo isSendPubcomp;
 
-    private String isComplete;
+    private YesOrNo isComplete;
 
     private Integer validTime;
 

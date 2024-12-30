@@ -168,7 +168,7 @@ public class DefaultDeal {
         Integer isRetain = messageVo.getIsRetained();
         MqttQoS fromMqttQoS = MqttQoS.valueOf(messageVo.getFromQos());
         String payload = messageVo.getPayload();
-        if (YesOrNo.YES.getValue().equals(isRetain)) {
+        if (YesOrNo.YES.getNumber().equals(isRetain)) {
             // qos == 0 || payload 为零字节，清除该主题下的保留消息
             if (MqttQoS.AT_MOST_ONCE == fromMqttQoS || StringUtils.isBlank(payload)) {
                 delTopicRetainMessage(messageVo.getTopic());
