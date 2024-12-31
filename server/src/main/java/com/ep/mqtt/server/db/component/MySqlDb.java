@@ -19,7 +19,7 @@ public class MySqlDb extends AbstractDb {
 
     @Override
     public void configDb() {
-
+        // TODO: 2024/12/31 根据元数据，检查数据库的隔离级别是否为rc
     }
 
     @Override

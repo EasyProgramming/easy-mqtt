@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import com.ep.mqtt.server.db.dao.ClientDao;
+import com.ep.mqtt.server.db.dto.ClientDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,9 @@ public class DefaultDeal {
     @Autowired
     private TopicStore topicStore;
 
+    @Autowired
+    private ClientDao clientDao;
+
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
             return true;
@@ -82,42 +87,13 @@ public class DefaultDeal {
             JsonUtil.obj2String(cleanExistSessionMsg));
     }
 
-    public ClientInfoVo getClientInfo(String clientId) {
-        HashOperations<String, String, String> hashOperations = stringRedisTemplate.opsForHash();
-        String clientJsonStr = hashOperations.get(StoreKey.CLIENT_INFO_KEY.formatKey(), clientId);
-        return JsonUtil.string2Obj(clientJsonStr, ClientInfoVo.class);
+    public ClientDto getClientInfo(String clientId) {
+        return clientDao.selectByClientId(clientId);
     }
 
     public void clearClientData(String clientId) {
-        cleanRemoteData(clientId);
-    }
+        // TODO: 2024/12/31 删除客户端、订阅关系、收到的消息、待发送消息
 
-    private void cleanRemoteData(String clientId) {
-        HashOperations<String, String, Integer> stringObjectObjectHashOperations = stringRedisTemplate.opsForHash();
-        Map<String, Integer> clientTopicFilterMap =
-            stringObjectObjectHashOperations.entries(StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId));
-        String messageKey = StoreKey.MESSAGE_KEY.formatKey(clientId);
-        String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(clientId);
-        String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(clientId);
-        String clientTopicFilterKey = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId);
-        String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(clientId);
-        stringRedisTemplate.execute(new SessionCallback<Void>() {
-            @SuppressWarnings({"unchecked", "NullableProblems"})
-            @Override
-            public Void execute(RedisOperations operations) throws DataAccessException {
-                // 移除订阅关系
-                for (Map.Entry<String, Integer> clientTopicFilter : clientTopicFilterMap.entrySet()) {
-                    operations.opsForHash().delete((StoreKey.TOPIC_FILTER_KEY.formatKey(clientTopicFilter.getKey())),
-                        clientId);
-                }
-                // 移除客户端的相关数据
-                operations.delete(
-                    Sets.newHashSet(clientTopicFilterKey, messageKey, recMessageKey, relMessageKey, genMessageIdKey));
-                // 移除会话信息
-                operations.opsForHash().delete(StoreKey.CLIENT_INFO_KEY.formatKey(), clientId);
-                return null;
-            }
-        });
     }
 
     public void saveClientInfo(ClientInfoVo clientInfoVo) {

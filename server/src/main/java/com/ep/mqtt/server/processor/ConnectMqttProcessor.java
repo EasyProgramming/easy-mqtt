@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.processor;
 
+import com.ep.mqtt.server.db.dto.ClientDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
@@ -29,29 +30,35 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
     public void process(ChannelHandlerContext channelHandlerContext, MqttConnectMessage mqttConnectMessage) {
         try {
             // 判断协议版本
+            String clientIdentifier = mqttConnectMessage.payload().clientIdentifier();
             if (!validVersion(mqttConnectMessage.variableHeader().version())) {
                 sendConnectAck(channelHandlerContext,
-                    MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION, false, true);
+                        MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION, false, true);
                 return;
             }
-            String clientIdentifier = mqttConnectMessage.payload().clientIdentifier();
-            // 与协议不一致，这里强制客户端上传id
+
+            // 判断协议是否合法
             if (StringUtils.isBlank(clientIdentifier)) {
                 sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED,
                     false, true);
                 return;
             }
+
+            // 鉴权
             if (!defaultDeal.authentication(mqttConnectMessage)) {
                 // 认证失败，返回错误的ack消息
                 sendConnectAck(channelHandlerContext,
                     MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD, false, true);
                 return;
             }
+
+            // 设置心跳时间
             int keepAliveTimeSeconds = keepAlive(channelHandlerContext, mqttConnectMessage);
-            ClientInfoVo clientInfo = defaultDeal.getClientInfo(clientIdentifier);
+
+            ClientDto clientDto = defaultDeal.getClientInfo(clientIdentifier);
             boolean isCleanSession = mqttConnectMessage.variableHeader().isCleanSession();
             boolean sessionPresent = false;
-            if (clientInfo != null) {
+            if (clientDto != null) {
                 if (isCleanSession) {
                     // 清除之前的数据
                     defaultDeal.clearClientData(clientIdentifier);
@@ -68,6 +75,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
                     defaultDeal.saveClientInfo(clientInfo);
                 }
             }
+
             // 新建内存会话
             Session session = new Session();
             session.setIsCleanSession(isCleanSession);
