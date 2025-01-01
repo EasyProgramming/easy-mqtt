@@ -2,10 +2,6 @@ package com.ep.mqtt.server.processor;
 
 import org.springframework.stereotype.Component;
 
-import com.ep.mqtt.server.session.Session;
-import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.util.NettyUtil;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
@@ -21,12 +17,6 @@ public class PingReqMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttMessage mqttMessage) {
-        String clientId = NettyUtil.getClientId(channelHandlerContext);
-        Session session = SessionManager.get(clientId);
-        if (session == null) {
-            throw new RuntimeException("session not exist");
-        }
-        defaultDeal.refreshData(session);
         channelHandlerContext.writeAndFlush(MqttMessage.PINGRESP);
     }
 
