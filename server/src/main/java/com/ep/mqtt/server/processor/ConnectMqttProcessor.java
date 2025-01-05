@@ -1,13 +1,16 @@
 package com.ep.mqtt.server.processor;
 
-import com.ep.mqtt.server.db.dto.ClientDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
+import com.ep.mqtt.server.metadata.RaftCommand;
+import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
+import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
+import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
+import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.NettyUtil;
-import com.ep.mqtt.server.vo.ClientInfoVo;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -33,7 +36,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             String clientIdentifier = mqttConnectMessage.payload().clientIdentifier();
             if (!validVersion(mqttConnectMessage.variableHeader().version())) {
                 sendConnectAck(channelHandlerContext,
-                        MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION, false, true);
+                    MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION, false, true);
                 return;
             }
 
@@ -55,26 +58,9 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             // 设置心跳时间
             int keepAliveTimeSeconds = keepAlive(channelHandlerContext, mqttConnectMessage);
 
-            ClientDto clientDto = defaultDeal.getClientInfo(clientIdentifier);
             boolean isCleanSession = mqttConnectMessage.variableHeader().isCleanSession();
-            boolean sessionPresent = false;
-            if (clientDto != null) {
-                if (isCleanSession) {
-                    // 清除之前的数据
-                    defaultDeal.clearClientData(clientIdentifier);
-                } else {
-                    defaultDeal.reConnect(clientInfo, channelHandlerContext);
-                    sessionPresent = true;
-                }
-            } else {
-                if (!isCleanSession) {
-                    // 持久化会话
-                    clientInfo = new ClientInfoVo();
-                    clientInfo.setClientId(clientIdentifier);
-                    clientInfo.setConnectTime(System.currentTimeMillis());
-                    defaultDeal.saveClientInfo(clientInfo);
-                }
-            }
+
+            defaultDeal.connect(clientIdentifier, isCleanSession);
 
             // 新建内存会话
             Session session = new Session();
@@ -84,11 +70,15 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             session.setSessionId(NettyUtil.getSessionId(channelHandlerContext));
             session.setKeepAliveTimeSeconds(keepAliveTimeSeconds);
             SessionManager.bind(clientIdentifier, session);
+
             // 踢出重复会话
-            defaultDeal.cleanExistSession(clientIdentifier, session.getSessionId());
-            // 刷新数据
-            defaultDeal.refreshData(session);
-            sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, sessionPresent, false);
+            CheckRepeatSession checkRepeatSession = new CheckRepeatSession();
+            checkRepeatSession.setSessionId(session.getSessionId());
+            checkRepeatSession.setClientId(session.getClientId());
+            EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
+                new TransferData(RaftCommand.CLEAN_EXIST_SESSION, JsonUtil.obj2String(checkRepeatSession))));
+
+            sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, !isCleanSession, false);
             log.info("client session id: [{}], client id: [{}] connect", session.getSessionId(), session.getClientId());
         } catch (Throwable throwable) {
             log.error("mqtt connect message process error", throwable);

@@ -1,37 +1,35 @@
 package com.ep.mqtt.server.deal;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-import com.ep.mqtt.server.db.dao.ClientDao;
-import com.ep.mqtt.server.db.dto.ClientDto;
+import javax.annotation.Resource;
+
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ep.mqtt.server.config.MqttServerProperties;
-import com.ep.mqtt.server.listener.msg.CleanExistSessionMsg;
+import com.ep.mqtt.server.db.dao.ClientDao;
+import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
+import com.ep.mqtt.server.db.dao.ReceiveMessageDao;
+import com.ep.mqtt.server.db.dao.SendMessageDao;
+import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.TransferData;
-import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.store.TopicStore;
 import com.ep.mqtt.server.util.*;
-import com.ep.mqtt.server.vo.ClientInfoVo;
 import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
@@ -49,20 +47,29 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class DefaultDeal {
 
-    @Autowired
+    @Resource
     private StringRedisTemplate stringRedisTemplate;
 
-    @Autowired
+    @Resource
     private TopicFilterStore topicFilterStore;
 
-    @Autowired
+    @Resource
     private MqttServerProperties mqttServerProperties;
 
-    @Autowired
+    @Resource
     private TopicStore topicStore;
 
-    @Autowired
+    @Resource
     private ClientDao clientDao;
+
+    @Resource
+    private ClientSubscribeDao clientSubscribeDao;
+
+    @Resource
+    private ReceiveMessageDao receiveMessageDao;
+
+    @Resource
+    private SendMessageDao sendMessageDao;
 
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
@@ -75,30 +82,12 @@ public class DefaultDeal {
         return Boolean.parseBoolean(returnStr);
     }
 
-    public void cleanExistSession(String clientId, String sessionId) {
-        Session session = SessionManager.get(clientId);
-        if (session != null && !session.getSessionId().equals(sessionId)) {
-            session.getChannelHandlerContext().disconnect();
-        }
-        CleanExistSessionMsg cleanExistSessionMsg = new CleanExistSessionMsg();
-        cleanExistSessionMsg.setClientId(clientId);
-        cleanExistSessionMsg.setSessionId(sessionId);
-        stringRedisTemplate.convertAndSend(ChannelKey.CLEAR_EXIST_SESSION.getKey(),
-            JsonUtil.obj2String(cleanExistSessionMsg));
-    }
-
-    public ClientDto getClientInfo(String clientId) {
-        return clientDao.selectByClientId(clientId);
-    }
-
+    @Transactional(rollbackFor = Exception.class)
     public void clearClientData(String clientId) {
-        // TODO: 2024/12/31 删除客户端、订阅关系、收到的消息、待发送消息
-
-    }
-
-    public void saveClientInfo(ClientInfoVo clientInfoVo) {
-        stringRedisTemplate.opsForHash().put(StoreKey.CLIENT_INFO_KEY.formatKey(), clientInfoVo.getClientId(),
-            JsonUtil.obj2String(clientInfoVo));
+        clientDao.deleteByClientId(clientId);
+        clientSubscribeDao.deleteByClientId(clientId);
+        receiveMessageDao.deleteByFromClientId(clientId);
+        sendMessageDao.deleteByToClientId(clientId);
     }
 
     public List<Integer> subscribe(String clientId, List<TopicVo> topicVoList) {
@@ -113,8 +102,8 @@ public class DefaultDeal {
                 stringRedisTemplate.opsForHash().put(StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter()),
                     clientId, String.valueOf(topicVo.getQos()));
 
-                EasyMqttRaftClient.syncSend(JsonUtil
-                    .obj2String(new TransferData(RaftCommand.ADD_TOPIC_FILTER.name(), topicVo.getTopicFilter())));
+                EasyMqttRaftClient.syncSend(
+                    JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC_FILTER, topicVo.getTopicFilter())));
 
                 subscribeResultList.add(topicVo.getQos());
             } catch (Exception e) {
@@ -288,87 +277,56 @@ public class DefaultDeal {
         stringRedisTemplate.opsForSet().remove(StoreKey.REL_MESSAGE_KEY.formatKey(clientId), String.valueOf(messageId));
     }
 
-    /**
-     * 客户端的重连动作
-     * 
-     * @param clientInfoVo
-     *            客户端信息
-     * @param channelHandlerContext
-     *            netty上下文
-     * 
-     */
-    public void reConnect(ClientInfoVo clientInfoVo, ChannelHandlerContext channelHandlerContext) {
-        // 更新客户端信息
-        ClientInfoVo updateClientInfoVo = new ClientInfoVo();
-        BeanUtils.copyProperties(clientInfoVo, updateClientInfoVo);
-        updateClientInfoVo.setConnectTime(System.currentTimeMillis());
-        saveClientInfo(updateClientInfoVo);
-        // 重发未接收消息
+    @Transactional(rollbackFor = Exception.class)
+    public void connect(String clientId, boolean isCleanSession) {
+        ClientDto existClientDto = clientDao.selectByClientId(clientId);
+
+        if (isCleanSession) {
+            if (existClientDto != null) {
+                // 清除之前的数据
+                clearClientData(clientId);
+            }
+
+            saveClientInfo(clientId, true);
+            return;
+        }
+
+        if (existClientDto == null) {
+            saveClientInfo(clientId, false);
+            return;
+        }
+
+        // 之前有会话，但之前的会话的设置的不持久化数据，所以清理之前的数据
+        if (YesOrNo.YES.equals(existClientDto.getIsCleanSession())) {
+            clearClientData(clientId);
+            saveClientInfo(clientId, false);
+            return;
+        }
+
+        // 更新客户端连接时间
+        clientDao.updateConnectTime(clientId, System.currentTimeMillis());
+
+        // 重发消息
         WorkerThreadPool.execute((a) -> {
-            String messageKey = StoreKey.MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
-            RedisTemplateUtil.hScan(stringRedisTemplate, messageKey, "*", 10000, entry -> {
-                String messageJsonStr = entry.getValue();
-                // 目前只有预设的数据为空字符串
-                if (StringUtils.isBlank(messageJsonStr)) {
-                    return;
-                }
-                MessageVo messageVo = JsonUtil.string2Obj(messageJsonStr, MessageVo.class);
-                Objects.requireNonNull(messageVo);
-                messageVo.setIsDup(true);
-                MqttUtil.sendPublish(channelHandlerContext, messageVo);
-            });
-        });
-        // 重发PubRec报文
-        WorkerThreadPool.execute((a) -> {
-            String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
-            RedisTemplateUtil.hScan(stringRedisTemplate, recMessageKey, "*", 10000, entry -> {
-                String messageIdStr = entry.getKey();
-                // 目前只有预设的数据为空字符串
-                if (StringUtils.isBlank(messageIdStr)) {
-                    return;
-                }
-                MqttUtil.sendPubRec(channelHandlerContext, Integer.valueOf(messageIdStr));
-            });
-        });
-        // 重发PubRel报文
-        WorkerThreadPool.execute((a) -> {
-            String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(clientInfoVo.getClientId());
-            RedisTemplateUtil.sScan(stringRedisTemplate, relMessageKey, "*", 10000, messageIdStr -> {
-                // 目前只有预设的数据为空字符串
-                if (StringUtils.isBlank(messageIdStr)) {
-                    return;
-                }
-                MqttUtil.sendPubRel(channelHandlerContext, Integer.valueOf(messageIdStr));
-            });
+            // 查询qos=1、未puback发送消息记录，重试推送publish报文任务
+
+            // 查询qos=2、未comp发送该消息记录，其中未rec的重试推送publish报文任务，已rec需要重试推送pubrel报文任务
+
+            // 这里重试任务，即根据任务id更新任务状态为READY的任务执行时间
+
         });
     }
 
-    public void refreshData(Session session) {
-        stringRedisTemplate.execute(new SessionCallback<Void>() {
-            @SuppressWarnings({"unchecked", "NullableProblems"})
-            @Override
-            public Void execute(RedisOperations operations) throws DataAccessException {
-                Duration expireTime = Duration.ofMillis(session.getDataExpireTimeMilliSecond());
-                String clientTopicFilterKey = StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(session.getClientId());
-                operations.opsForHash().put(clientTopicFilterKey, "", "");
-                String messageKey = StoreKey.MESSAGE_KEY.formatKey(session.getClientId());
-                operations.opsForHash().put(messageKey, "", "");
-                String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(session.getClientId());
-                operations.opsForHash().put(recMessageKey, "", "");
-                String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(session.getClientId());
-                operations.opsForSet().add(relMessageKey, "");
-                String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(session.getClientId());
-                operations.opsForValue().setIfAbsent(genMessageIdKey, "0");
-                if (session.getIsCleanSession()) {
-                    operations.expire(clientTopicFilterKey, expireTime);
-                    operations.expire(messageKey, expireTime);
-                    operations.expire(recMessageKey, expireTime);
-                    operations.expire(relMessageKey, expireTime);
-                    operations.expire(genMessageIdKey, expireTime);
-                }
-                return null;
-            }
-        });
+    private void saveClientInfo(String clientId, boolean isCleanSession) {
+        ClientDto clientDto = new ClientDto();
+        clientDto.setClientId(clientId);
+        clientDto.setIsCleanSession(isCleanSession ? YesOrNo.YES : YesOrNo.NO);
+
+        Long now = System.currentTimeMillis();
+        clientDto.setCreateTime(now);
+        clientDto.setLastConnectTime(now);
+
+        clientDao.insert(clientDto);
     }
 
     @Data

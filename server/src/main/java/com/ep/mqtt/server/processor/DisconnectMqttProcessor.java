@@ -19,6 +19,8 @@ public class DisconnectMqttProcessor extends AbstractMqttProcessor<MqttMessage> 
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttMessage mqttMessage) {
+        // TODO: 2025/1/1 清理数据
+
         channelHandlerContext.disconnect();
     }
 

@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.raft.transfer;
 
+import com.ep.mqtt.server.metadata.RaftCommand;
 import com.ep.mqtt.server.util.JsonUtil;
 
 import lombok.Data;
@@ -11,11 +12,11 @@ import lombok.Data;
 @Data
 public class TransferData {
 
-    private String command;
+    private RaftCommand command;
 
     private String data;
 
-    public TransferData(String command, String data) {
+    public TransferData(RaftCommand command, String data) {
         this.command = command;
         this.data = data;
     }

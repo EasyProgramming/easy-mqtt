@@ -3,6 +3,7 @@ package com.ep.mqtt.server.db.dto;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.ep.mqtt.server.metadata.Qos;
+
 import lombok.Data;
 
 /**
@@ -19,7 +20,7 @@ public class ClientSubscribeDto {
 
     private String topicFilter;
 
-    private Integer subscribeTime;
+    private Long subscribeTime;
 
     private Qos qos;
 

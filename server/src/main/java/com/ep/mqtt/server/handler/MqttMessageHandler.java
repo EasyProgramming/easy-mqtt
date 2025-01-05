@@ -8,12 +8,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.ep.mqtt.server.deal.DefaultDeal;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
-import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.util.NettyUtil;
-import com.ep.mqtt.server.util.WorkerThreadPool;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -60,8 +57,6 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         if (evt instanceof IdleStateEvent) {
             IdleStateEvent idleStateEvent = (IdleStateEvent)evt;
             if (idleStateEvent.state() == IdleState.ALL_IDLE) {
-                Channel channel = ctx.channel();
-                // TODO: 2023/7/1 待实现：发送遗嘱消息
                 ctx.close();
             }
         } else {
@@ -74,14 +69,14 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         log.info("client session id: [{}], client id: [{}] inactive", NettyUtil.getSessionId(ctx),
             NettyUtil.getClientId(ctx));
         String clientId = NettyUtil.getClientId(ctx);
-        // 如果有clientId则需要解绑
-        if (StringUtils.isNotBlank(clientId)) {
-            Session session = SessionManager.get(clientId);
-            if (session.getIsCleanSession()) {
-                WorkerThreadPool.execute(promise -> defaultDeal.clearClientData(clientId));
-            }
-            SessionManager.unbind(clientId);
+
+        if (StringUtils.isBlank(clientId)) {
+            return;
         }
+
+        SessionManager.unbind(clientId);
+
+        // TODO: 2025/1/1 获取这个客户端的遗嘱消息，并发送
     }
 
 }

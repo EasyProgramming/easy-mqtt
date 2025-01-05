@@ -2,6 +2,7 @@ package com.ep.mqtt.server.db.dto;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+
 import lombok.Data;
 
 /**
@@ -18,11 +19,11 @@ public class AsyncJobDto {
 
     private String businessType;
 
-    private Integer lastStartTime;
+    private Long lastStartTime;
 
-    private Integer lastEndTime;
+    private Long lastEndTime;
 
-    private Integer nextExecuteTime;
+    private Long nextExecuteTime;
 
     private Integer executeNum;
 

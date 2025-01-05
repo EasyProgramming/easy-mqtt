@@ -25,7 +25,6 @@ import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.util.MD5FileUtil;
 import org.apache.ratis.util.TimeDuration;
 
-import com.ep.mqtt.server.metadata.RaftCommand;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.store.TopicStore;
@@ -47,12 +46,9 @@ public class RaftStateMachine extends BaseStateMachine {
 
         private final ConcurrentHashSet<String> topicFilterSet = new ConcurrentHashSet<>();
 
-        private final ConcurrentHashSet<String> topicSet = new ConcurrentHashSet<>();
-
-        State(TermIndex applied, ConcurrentHashSet<String> topicFilterSet, ConcurrentHashSet<String> topicSet) {
+        State(TermIndex applied, ConcurrentHashSet<String> topicFilterSet) {
             this.applied = applied;
             this.topicFilterSet.addAll(topicFilterSet);
-            this.topicSet.addAll(topicSet);
         }
 
         TermIndex getApplied() {
@@ -61,10 +57,6 @@ public class RaftStateMachine extends BaseStateMachine {
 
         public ConcurrentHashSet<String> getTopicFilterSet() {
             return topicFilterSet;
-        }
-
-        public ConcurrentHashSet<String> getTopicSet() {
-            return topicSet;
         }
     }
 
@@ -92,9 +84,6 @@ public class RaftStateMachine extends BaseStateMachine {
             return transaction;
         }
 
-        if (RaftCommand.get(transferData.getCommand()) == null) {
-            transaction.setException(new IllegalArgumentException("invalid command: " + content));
-        }
         return transaction;
     }
 
@@ -120,21 +109,18 @@ public class RaftStateMachine extends BaseStateMachine {
 
         updateLastAppliedTermIndex(termIndex);
 
-        RaftCommand command = RaftCommand.get(transferData.getCommand());
-
-        // noinspection ConstantConditions
-        switch (command) {
+        switch (transferData.getCommand()) {
             case ADD_TOPIC_FILTER:
                 TopicFilterStore.add(transferData.getData());
                 break;
             case REMOVE_TOPIC_FILTER:
                 TopicFilterStore.remove(transferData.getData());
                 break;
-            case ADD_TOPIC:
-                TopicStore.add(transferData.getData());
+            case CLEAN_EXIST_SESSION:
+                // TODO: 2025/1/5 待实现清理已存在session
                 break;
-            case REMOVE_TOPIC:
-                TopicStore.remove(transferData.getData());
+            case SEND_MESSAGE:
+                // TODO: 2025/1/5 待实现发送消息逻辑
                 break;
             default:
         }
@@ -153,14 +139,6 @@ public class RaftStateMachine extends BaseStateMachine {
         try (BufferedWriter out = Files.newBufferedWriter(snapshotFile.toPath())) {
             for (String topicFilter : state.getTopicFilterSet()) {
                 out.write(topicFilter);
-                out.newLine();
-            }
-            // 写入分割行
-            out.write(SPLIT_FLAG);
-            out.newLine();
-
-            for (String topic : state.getTopicSet()) {
-                out.write(topic);
                 out.newLine();
             }
         } catch (IOException ioe) {
@@ -235,7 +213,7 @@ public class RaftStateMachine extends BaseStateMachine {
     }
 
     private synchronized State getState() {
-        return new State(getLastAppliedTermIndex(), TopicFilterStore.getTopicFilterSet(), TopicStore.getTopicSet());
+        return new State(getLastAppliedTermIndex(), TopicFilterStore.getTopicFilterSet());
     }
 
     private synchronized void updateState(TermIndex applied, Set<String> topicFilterSet, Set<String> topicSet) {

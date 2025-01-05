@@ -5,12 +5,16 @@ import java.text.SimpleDateFormat;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.ep.mqtt.server.metadata.BaseEnum;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 /**
  * @author : zbz
@@ -32,6 +36,12 @@ public class JsonUtil {
         OBJECT_MAPPER.setDateFormat(new SimpleDateFormat(STANDARD_FORMAT));
         // 忽略 在json字符串中存在，但是在java对象中不存在对应属性的情况。防止错误
         OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addSerializer(Enum.class, new EnumSerializer());
+        simpleModule.addDeserializer(Enum.class, new EnumDeserializer());
+
+        OBJECT_MAPPER.registerModule(simpleModule);
     }
 
     /**
@@ -93,4 +103,66 @@ public class JsonUtil {
             throw new RuntimeException(e);
         }
     }
+
+    public static class EnumSerializer extends JsonSerializer<Enum> {
+
+        @Override
+        public void serialize(Enum anEnum, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+            throws IOException {
+            jsonGenerator.writeObject(BaseEnum.invokeGetMethod(anEnum, BaseEnum.GET_CODE_METHOD_NAME));
+        }
+
+    }
+
+    public static class EnumDeserializer extends JsonDeserializer<Enum> implements ContextualDeserializer {
+
+        private Class<?> enumClass;
+
+        public EnumDeserializer() {
+
+        }
+
+        public EnumDeserializer(Class<?> enumClass) {
+            this.enumClass = enumClass;
+        }
+
+        @SuppressWarnings({"unchecked"})
+        @Override
+        public Enum deserialize(JsonParser p, DeserializationContext deserializationContext) throws IOException {
+            JsonToken token = p.getCurrentToken();
+
+            Object value = null;
+            switch (token) {
+                case VALUE_STRING:
+                    value = p.getValueAsString();
+                    break;
+                case VALUE_NUMBER_INT:
+                    value = p.getValueAsInt();
+                    break;
+                case VALUE_NUMBER_FLOAT:
+                    value = p.getValueAsDouble();
+                    break;
+                case VALUE_TRUE:
+                case VALUE_FALSE:
+                    value = p.getValueAsBoolean();
+                    break;
+                case VALUE_NULL:
+                    break;
+                default:
+                    return null;
+            }
+
+            return BaseEnum.getByCode(value, (Class<Enum>)this.enumClass);
+        }
+
+        @Override
+        public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext,
+            BeanProperty beanProperty) {
+            Class<?> clazz = deserializationContext.getContextualType() != null
+                ? deserializationContext.getContextualType().getRawClass()
+                : beanProperty.getMember().getType().getRawClass();
+            return new EnumDeserializer(clazz);
+        }
+    }
+
 }
