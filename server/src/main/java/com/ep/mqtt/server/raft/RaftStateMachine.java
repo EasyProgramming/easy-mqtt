@@ -25,9 +25,13 @@ import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.util.MD5FileUtil;
 import org.apache.ratis.util.TimeDuration;
 
+import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
 import com.ep.mqtt.server.raft.transfer.TransferData;
+import com.ep.mqtt.server.session.Session;
+import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.store.TopicStore;
+import com.ep.mqtt.server.util.JsonUtil;
 import com.google.common.collect.Sets;
 
 import io.vertx.core.impl.ConcurrentHashSet;
@@ -117,7 +121,16 @@ public class RaftStateMachine extends BaseStateMachine {
                 TopicFilterStore.remove(transferData.getData());
                 break;
             case CLEAN_EXIST_SESSION:
-                // TODO: 2025/1/5 待实现清理已存在session
+                CheckRepeatSession checkRepeatSession =
+                    JsonUtil.string2Obj(transferData.getData(), CheckRepeatSession.class);
+                if (checkRepeatSession == null) {
+                    break;
+                }
+
+                Session session = SessionManager.get(checkRepeatSession.getClientId());
+                if (session != null && !session.getSessionId().equals(checkRepeatSession.getSessionId())) {
+                    session.getChannelHandlerContext().disconnect();
+                }
                 break;
             case SEND_MESSAGE:
                 // TODO: 2025/1/5 待实现发送消息逻辑
