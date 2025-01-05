@@ -86,6 +86,7 @@ public class DefaultDeal {
     public void clearClientData(String clientId) {
         clientDao.deleteByClientId(clientId);
         clientSubscribeDao.deleteByClientId(clientId);
+        // TODO: 2025/1/5 在关于消息的异步任务中，如果发现消息不存在，则视为执行成功
         receiveMessageDao.deleteByFromClientId(clientId);
         sendMessageDao.deleteByToClientId(clientId);
     }
