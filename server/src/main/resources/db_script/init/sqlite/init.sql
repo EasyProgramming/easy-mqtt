@@ -3,17 +3,19 @@
 -- ----------------------------
 CREATE TABLE "async_job" (
                              "id" integer NOT NULL,
-                             "job_id" text NOT NULL,
+                             "business_id" text NOT NULL,
                              "business_type" text NOT NULL,
-                             "last_start_time" integer NOT NULL,
-                             "last_end_time" integer NOT NULL,
-                             "next_execute_time" integer NOT NULL,
+                             "last_start_time" integer,
+                             "last_end_time" integer,
+                             "last_execute_result" text,
+                             "last_execute_result_desc" text,
+                             "expect_execute_time" integer NOT NULL,
                              "execute_num" integer NOT NULL,
                              "execute_status" text NOT NULL,
-                             "execute_result" text NOT NULL,
-                             "extend_data" text NOT NULL,
+                             "extend_data" text,
                              PRIMARY KEY ("id")
 );
+
 
 -- ----------------------------
 -- Table structure for client
@@ -23,6 +25,7 @@ CREATE TABLE "client" (
                           "client_id" text NOT NULL,
                           "last_connect_time" integer NOT NULL,
                           "create_time" integer NOT NULL,
+                          "is_clean_session" text NOT NULL,
                           PRIMARY KEY ("id")
 );
 
@@ -111,11 +114,11 @@ CREATE TABLE "topic_filter" (
 -- ----------------------------
 CREATE UNIQUE INDEX "async_job_index_1"
     ON "async_job" (
-                    "job_id" ASC
+                    "business_id" ASC
         );
 CREATE INDEX "async_job_index_2"
     ON "async_job" (
-                    "next_execute_time" ASC,
+                    "expect_execute_time" ASC,
                     "execute_status" ASC
         );
 
