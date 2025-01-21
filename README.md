@@ -3,7 +3,7 @@ English | [简体中文](./README-CN.md)
 # 💎 Easy MQTT
 A simple, practical, and high-performance `MQTT` broker
 
-## Goals
+## 🎯 Goals
 Keep everything simple
 
 ## 💪 Advantages

@@ -3,7 +3,7 @@ English | [简体中文](./README-CN.md)
 # 💎 Easy MQTT
 一款简单、实用、高性能的`MQTT`服务器
 
-## 目标
+## 🎯目标
 让一切保持简单
 
 ## 💪 优势
@@ -12,7 +12,6 @@ English | [简体中文](./README-CN.md)
 - 一键启动
 
 ## 🚩 功能
-- [x] 支持MQTT v3.1.1协议
 - [x] 支持MQTT v3.1.1协议
 - [x] 支持WebSocket MQTT子协议
 - [x] 数据的持久化
