@@ -2,20 +2,11 @@ package com.ep.mqtt.server.metadata;
 
 /**
  * 异步任务状态
+ * 
  * @author zbz
  * @date 2025/1/8 17:24
  */
 public enum AsyncJobExecuteResult implements BaseEnum<String> {
-
-    /**
-     * 待执行
-     */
-    READY("READY", "待执行"),
-
-    /**
-     * 执行中
-     */
-    EXECUTING("EXECUTING", "执行中"),
 
     /**
      * 成功
@@ -33,7 +24,7 @@ public enum AsyncJobExecuteResult implements BaseEnum<String> {
 
     private final String desc;
 
-    AsyncJobExecuteResult(String code, String desc){
+    AsyncJobExecuteResult(String code, String desc) {
         this.code = code;
         this.desc = desc;
     }

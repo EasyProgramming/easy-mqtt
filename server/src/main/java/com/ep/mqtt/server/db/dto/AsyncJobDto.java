@@ -2,9 +2,10 @@ package com.ep.mqtt.server.db.dto;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
+import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
+
 import lombok.Data;
 
 /**
@@ -25,7 +26,7 @@ public class AsyncJobDto {
     /**
      * 业务类型
      */
-    private String businessType;
+    private AsyncJobBusinessType businessType;
 
     /**
      * 最近一次执行开始时间
@@ -48,7 +49,7 @@ public class AsyncJobDto {
     private AsyncJobExecuteResult lastExecuteResult;
 
     /**
-     * 下一次执行时间
+     * 预计执行时间
      */
     private Long expectExecuteTime;
 
@@ -70,7 +71,10 @@ public class AsyncJobDto {
     @Data
     public static class ExtendData {
 
-        private String traceId;
+        /**
+         * 执行耗时
+         */
+        private Long executeCostTime;
 
     }
 
