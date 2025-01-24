@@ -68,6 +68,11 @@ public class AsyncJobDto {
      */
     private String extendData;
 
+    /**
+     * 任务参数
+     */
+    private String jobParam;
+
     @Data
     public static class ExtendData {
 

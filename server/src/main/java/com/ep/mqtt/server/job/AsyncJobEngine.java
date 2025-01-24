@@ -13,12 +13,14 @@ import javax.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
+import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
 import com.ep.mqtt.server.db.dao.AsyncJobDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
 import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.TransactionUtil;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -35,8 +37,8 @@ public class AsyncJobEngine {
     /**
      * 查询任务的线程池
      */
-    private static final ScheduledThreadPoolExecutor QUERY_THREAD_POOL = new ScheduledThreadPoolExecutor(
-        Constant.PROCESSOR_NUM, new ThreadFactoryBuilder().setNameFormat("async-job-query-%s").build());
+    private static final ScheduledThreadPoolExecutor QUERY_THREAD_POOL =
+        new ScheduledThreadPoolExecutor(Constant.PROCESSOR_NUM, new ThreadFactoryBuilder().setNameFormat("async-job-query-%s").build());
 
     @Resource
     private AsyncJobDao asyncJobDao;
@@ -44,16 +46,15 @@ public class AsyncJobEngine {
     @Resource
     private TransactionUtil transactionUtil;
 
-    private Map<AsyncJobBusinessType, AbstractJobProcessor> processorMap;
+    private Map<AsyncJobBusinessType, AbstractJobProcessor<Object>> processorMap;
 
     @PostConstruct
-    public void init(List<AbstractJobProcessor> abstractJobProcessorList) {
+    public void init(List<AbstractJobProcessor<Object>> abstractJobProcessorList) {
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryJobRunnable(), 60, 1, TimeUnit.SECONDS);
 
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryTimeoutJobRunnable(), 1, 5, TimeUnit.MINUTES);
 
-        processorMap =
-            abstractJobProcessorList.stream().collect(Collectors.toMap(AbstractJobProcessor::getBusinessType, b -> b));
+        processorMap = abstractJobProcessorList.stream().collect(Collectors.toMap(AbstractJobProcessor::getBusinessType, b -> b));
     }
 
     public class QueryJobRunnable implements Runnable {
@@ -69,16 +70,15 @@ public class AsyncJobEngine {
                 }
 
                 for (AsyncJobDto pendingJob : pendingJobList) {
-                    Boolean isOccupy =
-                        transactionUtil.transaction(() -> asyncJobDao.tryOccupyJob(pendingJob.getBusinessId()));
+                    Boolean isOccupy = transactionUtil.transaction(() -> asyncJobDao.tryOccupyJob(pendingJob.getBusinessId()));
                     if (!isOccupy) {
                         continue;
                     }
 
-                    AbstractJobProcessor jobProcessor = processorMap.get(pendingJob.getBusinessType());
+                    AbstractJobProcessor<Object> jobProcessor = processorMap.get(pendingJob.getBusinessType());
                     if (jobProcessor == null) {
-                        asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.FINISH,
-                            pendingJob.getExecuteNum() + 1, AsyncJobExecuteResult.FAIL, "未找到对应的processor", null);
+                        asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.FINISH, pendingJob.getExecuteNum() + 1,
+                            AsyncJobExecuteResult.FAIL, "未找到对应的processor", null);
                         continue;
                     }
 
@@ -97,8 +97,8 @@ public class AsyncJobEngine {
                                 }
                             } catch (Throwable e) {
                                 log.error("执行异步任务时出现异常:[获取任务失败]", e);
-                                asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.READY,
-                                    pendingJob.getExecuteNum(), AsyncJobExecuteResult.FAIL, e.getMessage(),
+                                asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.READY, pendingJob.getExecuteNum(),
+                                    AsyncJobExecuteResult.FAIL, e.getMessage(),
                                     pendingJob.getExpectExecuteTime() + jobProcessor.getRetryInterval() * 1000L);
                                 return null;
                             }
@@ -106,7 +106,8 @@ public class AsyncJobEngine {
                             AsyncJobExecuteResult executeResult;
                             String executeResultDesc;
                             try {
-                                executeResult = jobProcessor.process(asyncJobDto);
+                                executeResult = jobProcessor.process(asyncJobDto, JsonUtil.string2Obj(asyncJobDto.getJobParam(),
+                                    ReflectionKit.getSuperClassGenericType(jobProcessor.getClass(), AbstractJobProcessor.class, 0)));
                                 // null代表成功执行任务
                                 if (executeResult == null) {
                                     executeResult = AsyncJobExecuteResult.SUCCESS;
@@ -122,21 +123,19 @@ public class AsyncJobEngine {
                             AsyncJobStatus jobStatus = AsyncJobStatus.FINISH;
                             Long expectExecuteTime = null;
                             if (!AsyncJobExecuteResult.SUCCESS.equals(executeResult)) {
-                                if (jobProcessor.getMaxRetryNum() == null
-                                    || jobProcessor.getMaxRetryNum() > asyncJobDto.getExecuteNum()) {
+                                if (jobProcessor.getMaxRetryNum() == null || jobProcessor.getMaxRetryNum() > asyncJobDto.getExecuteNum()) {
                                     jobStatus = AsyncJobStatus.READY;
-                                    expectExecuteTime =
-                                        asyncJobDto.getExpectExecuteTime() + jobProcessor.getRetryInterval() * 1000L;
+                                    expectExecuteTime = asyncJobDto.getExpectExecuteTime() + jobProcessor.getRetryInterval() * 1000L;
                                 }
                             }
 
-                            asyncJobDao.finishJob(asyncJobDto.getBusinessId(), jobStatus,
-                                asyncJobDto.getExecuteNum() + 1, executeResult, executeResultDesc, expectExecuteTime);
+                            asyncJobDao.finishJob(asyncJobDto.getBusinessId(), jobStatus, asyncJobDto.getExecuteNum() + 1, executeResult,
+                                executeResultDesc, expectExecuteTime);
                             return null;
                         });
 
-                        log.info("处理事件：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(),
-                            pendingJob.getBusinessId(), System.currentTimeMillis() - start);
+                        log.info("处理事件：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
+                            System.currentTimeMillis() - start);
                     });
                 }
 
@@ -168,8 +167,8 @@ public class AsyncJobEngine {
                         return null;
                     }
 
-                    asyncJobDao.finishJob(lastAsyncJobDto.getBusinessId(), AsyncJobStatus.FINISH,
-                        lastAsyncJobDto.getExecuteNum(), AsyncJobExecuteResult.FAIL, "执行超时", null);
+                    asyncJobDao.finishJob(lastAsyncJobDto.getBusinessId(), AsyncJobStatus.FINISH, lastAsyncJobDto.getExecuteNum(),
+                        AsyncJobExecuteResult.FAIL, "执行超时", null);
                     return null;
                 });
             }

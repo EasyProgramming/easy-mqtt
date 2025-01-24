@@ -13,7 +13,7 @@ import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
  * @author : zbz
  * @date : 2025/1/12
  */
-public abstract class AbstractJobProcessor {
+public abstract class AbstractJobProcessor<K extends Object> {
 
     /**
      * 用于执行任务的线程池
@@ -29,10 +29,12 @@ public abstract class AbstractJobProcessor {
      * 
      * @param asyncJobDto
      *            任务信息
+     * @param jobParam
+     *            任务参数
      * @return 执行结果
      */
     @Nullable
-    public abstract AsyncJobExecuteResult process(AsyncJobDto asyncJobDto);
+    public abstract AsyncJobExecuteResult process(AsyncJobDto asyncJobDto, K jobParam);
 
     /**
      * 获取业务类型

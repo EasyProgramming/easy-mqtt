@@ -1,112 +1,121 @@
 -- ----------------------------
 -- Table structure for async_job
 -- ----------------------------
-CREATE TABLE "async_job" (
-                             "id" integer NOT NULL,
-                             "business_id" text NOT NULL,
-                             "business_type" text NOT NULL,
-                             "last_start_time" integer,
-                             "last_end_time" integer,
-                             "last_execute_result" text,
-                             "last_execute_result_desc" text,
-                             "expect_execute_time" integer NOT NULL,
-                             "execute_num" integer NOT NULL,
-                             "execute_status" text NOT NULL,
-                             "extend_data" text,
-                             PRIMARY KEY ("id")
+CREATE TABLE "async_job"
+(
+    "id"                       integer NOT NULL,
+    "business_id"              text    NOT NULL,
+    "business_type"            text    NOT NULL,
+    "last_start_time"          integer,
+    "last_end_time"            integer,
+    "last_execute_result"      text,
+    "last_execute_result_desc" text,
+    "expect_execute_time"      integer NOT NULL,
+    "execute_num"              integer NOT NULL,
+    "execute_status"           text    NOT NULL,
+    "extend_data"              text,
+    "job_param"                text    NOT NULL,
+    PRIMARY KEY ("id")
 );
 
 
 -- ----------------------------
 -- Table structure for client
 -- ----------------------------
-CREATE TABLE "client" (
-                          "id" integer NOT NULL,
-                          "client_id" text NOT NULL,
-                          "last_connect_time" integer NOT NULL,
-                          "create_time" integer NOT NULL,
-                          "is_clean_session" text NOT NULL,
-                          PRIMARY KEY ("id")
+CREATE TABLE "client"
+(
+    "id"                integer NOT NULL,
+    "client_id"         text    NOT NULL,
+    "last_connect_time" integer NOT NULL,
+    "create_time"       integer NOT NULL,
+    "is_clean_session"  text    NOT NULL,
+    PRIMARY KEY ("id")
 );
 
 -- ----------------------------
 -- Table structure for client_subscribe
 -- ----------------------------
-CREATE TABLE "client_subscribe" (
-                                    "id" INTEGER NOT NULL,
-                                    "client_id" text NOT NULL,
-                                    "topic_filter" text NOT NULL,
-                                    "subscribe_time" integer NOT NULL,
-                                    "qos" integer NOT NULL,
-                                    PRIMARY KEY ("id")
+CREATE TABLE "client_subscribe"
+(
+    "id"             INTEGER NOT NULL,
+    "client_id"      text    NOT NULL,
+    "topic_filter"   text    NOT NULL,
+    "subscribe_time" integer NOT NULL,
+    "qos"            integer NOT NULL,
+    PRIMARY KEY ("id")
 );
 
 -- ----------------------------
 -- Table structure for meta_data
 -- ----------------------------
-CREATE TABLE "meta_data" (
-                             "key" text NOT NULL,
-                             "value" text NOT NULL,
-                             "desc" text NOT NULL,
-                             PRIMARY KEY ("key")
+CREATE TABLE "meta_data"
+(
+    "key"   text NOT NULL,
+    "value" text NOT NULL,
+    "desc"  text NOT NULL,
+    PRIMARY KEY ("key")
 );
 
 -- ----------------------------
 -- Table structure for receive_message
 -- ----------------------------
-CREATE TABLE "receive_message" (
-                                   "id" integer NOT NULL,
-                                   "receive_qos" integer NOT NULL,
-                                   "topic" text NOT NULL,
-                                   "receive_message_id" text NOT NULL,
-                                   "from_client_id" text NOT NULL,
-                                   "payload" text NOT NULL,
-                                   "is_send_puback" text NOT NULL,
-                                   "is_receive_pubrel" text NOT NULL,
-                                   "is_send_pubcomp" text NOT NULL,
-                                   "is_complete" text NOT NULL,
-                                   "valid_time" integer NOT NULL,
-                                   PRIMARY KEY ("id")
+CREATE TABLE "receive_message"
+(
+    "id"                 integer NOT NULL,
+    "receive_qos"        integer NOT NULL,
+    "topic"              text    NOT NULL,
+    "receive_message_id" text    NOT NULL,
+    "from_client_id"     text    NOT NULL,
+    "payload"            text    NOT NULL,
+    "is_send_puback"     text    NOT NULL,
+    "is_receive_pubrel"  text    NOT NULL,
+    "is_send_pubcomp"    text    NOT NULL,
+    "is_complete"        text    NOT NULL,
+    "valid_time"         integer NOT NULL,
+    PRIMARY KEY ("id")
 );
 
 -- ----------------------------
 -- Table structure for retain_message
 -- ----------------------------
-CREATE TABLE "retain_message" (
-                                  "id" integer NOT NULL,
-                                  "payload" text NOT NULL,
-                                  "receive_qos" integer NOT NULL,
-                                  "topic" text NOT NULL,
-                                  PRIMARY KEY ("id")
+CREATE TABLE "retain_message"
+(
+    "id"          integer NOT NULL,
+    "payload"     text    NOT NULL,
+    "receive_qos" integer NOT NULL,
+    "topic"       text    NOT NULL,
+    PRIMARY KEY ("id")
 );
 
 -- ----------------------------
 -- Table structure for send_message
 -- ----------------------------
-CREATE TABLE "send_message" (
-                                "id" integer NOT NULL,
-                                "receive_qos" integer NOT NULL,
-                                "receive_message_id" text NOT NULL,
-                                "from_client_id" text NOT NULL,
-                                "send_qos" integer NOT NULL,
-                                "topic" text NOT NULL,
-                                "send_message_id" text NOT NULL,
-                                "to_client_id" text NOT NULL,
-                                "payload" text NOT NULL,
-                                "is_receive_puback" text NOT NULL,
-                                "is_receive_pubrec" text NOT NULL,
-                                "is_receive_pubcomp" text NOT NULL,
-                                "valid_time" integer NOT NULL,
-                                PRIMARY KEY ("id")
+CREATE TABLE "send_message"
+(
+    "id"                 integer NOT NULL,
+    "receive_qos"        integer NOT NULL,
+    "receive_message_id" text    NOT NULL,
+    "from_client_id"     text    NOT NULL,
+    "send_qos"           integer NOT NULL,
+    "topic"              text    NOT NULL,
+    "send_message_id"    text    NOT NULL,
+    "to_client_id"       text    NOT NULL,
+    "payload"            text    NOT NULL,
+    "is_receive_puback"  text    NOT NULL,
+    "is_receive_pubrec"  text    NOT NULL,
+    "is_receive_pubcomp" text    NOT NULL,
+    "valid_time"         integer NOT NULL,
+    PRIMARY KEY ("id")
 );
 
 -- ----------------------------
 -- Table structure for topic_filter
 -- ----------------------------
-CREATE TABLE "topic_filter" (
-                                "id" integer NOT NULL,
-                                "topic_filter" text NOT NULL,
-                                PRIMARY KEY ("id")
+CREATE TABLE "topic_filter"
+(
+    "id"           integer NOT NULL,
+    "topic_filter" text    NOT NULL,
+    PRIMARY KEY ("id")
 );
 
 -- ----------------------------
