@@ -67,10 +67,7 @@ CREATE TABLE "receive_message"
     "receive_message_id" text    NOT NULL,
     "from_client_id"     text    NOT NULL,
     "payload"            text    NOT NULL,
-    "is_send_puback"     text    NOT NULL,
     "is_receive_pubrel"  text    NOT NULL,
-    "is_send_pubcomp"    text    NOT NULL,
-    "is_complete"        text    NOT NULL,
     "valid_time"         integer NOT NULL,
     PRIMARY KEY ("id")
 );

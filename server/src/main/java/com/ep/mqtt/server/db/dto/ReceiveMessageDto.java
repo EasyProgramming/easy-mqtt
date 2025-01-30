@@ -27,13 +27,7 @@ public class ReceiveMessageDto {
 
     private String payload;
 
-    private YesOrNo isSendPuback;
-
     private YesOrNo isReceivePubrel;
-
-    private YesOrNo isSendPubcomp;
-
-    private YesOrNo isComplete;
 
     private Long validTime;
 
