@@ -68,7 +68,7 @@ CREATE TABLE "receive_message"
     "from_client_id"    text    NOT NULL,
     "payload"           text    NOT NULL,
     "is_receive_pubrel" text    NOT NULL,
-    "valid_time"        integer NOT NULL,
+    "receive_time"      integer NOT NULL,
     PRIMARY KEY ("id")
 );
 

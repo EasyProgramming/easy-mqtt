@@ -29,6 +29,6 @@ public class ReceiveMessageDto {
 
     private YesOrNo isReceivePubrel;
 
-    private Long validTime;
+    private Long receiveTime;
 
 }
