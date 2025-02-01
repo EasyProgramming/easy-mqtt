@@ -363,12 +363,14 @@ public class DefaultDeal {
                 existMessage.setReceiveTime(now.getTime());
                 receiveMessageDao.insert(existMessage);
             } catch (DuplicateKeyException e) {
-                log.warn("已接收消息[{}][{}]", fromClientId, receivePacketId);
+                log.warn("已接收消息 fromClientId:[{}], receivePacketId:[{}]", fromClientId, receivePacketId);
                 return;
             }
         } else {
             if (!existMessage.getReceiveQos().equals(receiveQos)) {
-                throw new RuntimeException("不支持的报文");
+                log.error("qos不一致 fromClientId:[{}], receivePacketId:[{}], existQos:[{}], receiveQos:[{}]", fromClientId, receivePacketId,
+                    existMessage.getReceiveQos().getCode(), receiveQos.getCode());
+                throw new RuntimeException("qos不一致");
             }
         }
 
