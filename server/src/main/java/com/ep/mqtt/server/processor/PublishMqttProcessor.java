@@ -7,9 +7,7 @@ import org.springframework.stereotype.Component;
 import com.ep.mqtt.server.deal.DefaultDeal;
 import com.ep.mqtt.server.metadata.BaseEnum;
 import com.ep.mqtt.server.metadata.Qos;
-import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.util.NettyUtil;
-import com.ep.mqtt.server.vo.MessageVo;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -34,16 +32,11 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
     protected void process(ChannelHandlerContext channelHandlerContext, MqttPublishMessage mqttPublishMessage) {
         byte[] data = new byte[mqttPublishMessage.payload().readableBytes()];
         mqttPublishMessage.payload().getBytes(mqttPublishMessage.payload().readerIndex(), data);
+        String dataStr = new String(data);
 
         defaultDeal.publish(channelHandlerContext, BaseEnum.getByCode(mqttPublishMessage.fixedHeader().qosLevel(), Qos.class),
             mqttPublishMessage.variableHeader().topicName(), String.valueOf(mqttPublishMessage.variableHeader().packetId()),
-            NettyUtil.getClientId(channelHandlerContext), new String(data));
-    }
-
-    private MessageVo convert(MqttPublishMessage mqttPublishMessage, ChannelHandlerContext channelHandlerContext) {
-        MessageVo messageVo = new MessageVo();
-        messageVo.setIsRetained(YesOrNo.valueOf(mqttPublishMessage.fixedHeader().isRetain()).getNumber());
-        return messageVo;
+            NettyUtil.getClientId(channelHandlerContext), dataStr, mqttPublishMessage.fixedHeader().isRetain());
     }
 
     @Override

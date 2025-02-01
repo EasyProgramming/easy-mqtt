@@ -324,7 +324,7 @@ public class DefaultDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public void publish(ChannelHandlerContext channelHandlerContext, Qos receiveQos, String topic, String receivePacketId, String fromClientId,
-        String payload) {
+        String payload, boolean isRetain) {
         if (receiveQos == null) {
             return;
         }
