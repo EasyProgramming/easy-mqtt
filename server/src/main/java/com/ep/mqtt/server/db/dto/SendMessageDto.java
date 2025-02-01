@@ -19,7 +19,7 @@ public class SendMessageDto {
 
     private Qos receiveQos;
 
-    private String receiveMessageId;
+    private String receivePacketId;
 
     private String fromClientId;
 
@@ -27,7 +27,7 @@ public class SendMessageDto {
 
     private String topic;
 
-    private String sendMessageId;
+    private String sendPacketId;
 
     private String toClientId;
 

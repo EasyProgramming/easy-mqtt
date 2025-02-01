@@ -21,7 +21,7 @@ public class ReceiveMessageDto {
 
     private String topic;
 
-    private String receiveMessageId;
+    private String receivePacketId;
 
     private String fromClientId;
 

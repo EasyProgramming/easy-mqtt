@@ -61,14 +61,14 @@ CREATE TABLE "meta_data"
 -- ----------------------------
 CREATE TABLE "receive_message"
 (
-    "id"                 integer NOT NULL,
-    "receive_qos"        integer NOT NULL,
-    "topic"              text    NOT NULL,
-    "receive_message_id" text    NOT NULL,
-    "from_client_id"     text    NOT NULL,
-    "payload"            text    NOT NULL,
-    "is_receive_pubrel"  text    NOT NULL,
-    "valid_time"         integer NOT NULL,
+    "id"                integer NOT NULL,
+    "receive_qos"       integer NOT NULL,
+    "topic"             text    NOT NULL,
+    "receive_packet_id" text    NOT NULL,
+    "from_client_id"    text    NOT NULL,
+    "payload"           text    NOT NULL,
+    "is_receive_pubrel" text    NOT NULL,
+    "valid_time"        integer NOT NULL,
     PRIMARY KEY ("id")
 );
 
@@ -91,11 +91,11 @@ CREATE TABLE "send_message"
 (
     "id"                 integer NOT NULL,
     "receive_qos"        integer NOT NULL,
-    "receive_message_id" text    NOT NULL,
+    "receive_packet_id"  text    NOT NULL,
     "from_client_id"     text    NOT NULL,
     "send_qos"           integer NOT NULL,
     "topic"              text    NOT NULL,
-    "send_message_id"    text    NOT NULL,
+    "send_packet_id"     text    NOT NULL,
     "to_client_id"       text    NOT NULL,
     "payload"            text    NOT NULL,
     "is_receive_puback"  text    NOT NULL,
