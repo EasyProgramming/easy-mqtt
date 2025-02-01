@@ -1,12 +1,14 @@
 package com.ep.mqtt.server.deal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
+import static io.netty.handler.codec.mqtt.MqttQoS.EXACTLY_ONCE;
+
+import java.util.*;
 
 import javax.annotation.Resource;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -20,6 +22,9 @@ import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
 import com.ep.mqtt.server.db.dao.ReceiveMessageDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.ClientDto;
+import com.ep.mqtt.server.db.dto.ReceiveMessageDto;
+import com.ep.mqtt.server.job.AsyncJobManage;
+import com.ep.mqtt.server.job.DispatchMessageParam;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.TransferData;
@@ -33,6 +38,8 @@ import com.google.common.collect.Lists;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageBuilders;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +78,9 @@ public class DefaultDeal {
     @Resource
     private SendMessageDao sendMessageDao;
 
+    @Resource
+    private AsyncJobManage asyncJobManage;
+
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
             return true;
@@ -97,14 +107,13 @@ public class DefaultDeal {
             try {
                 TopicUtil.validateTopicFilter(topicVo.getTopicFilter());
 
-                stringRedisTemplate.opsForHash().put(StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId),
-                    topicVo.getTopicFilter(), String.valueOf(topicVo.getQos()));
+                stringRedisTemplate.opsForHash().put(StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId), topicVo.getTopicFilter(),
+                    String.valueOf(topicVo.getQos()));
 
-                stringRedisTemplate.opsForHash().put(StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter()),
-                    clientId, String.valueOf(topicVo.getQos()));
+                stringRedisTemplate.opsForHash().put(StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter()), clientId,
+                    String.valueOf(topicVo.getQos()));
 
-                EasyMqttRaftClient.syncSend(
-                    JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC_FILTER, topicVo.getTopicFilter())));
+                EasyMqttRaftClient.syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC_FILTER, topicVo.getTopicFilter())));
 
                 subscribeResultList.add(topicVo.getQos());
             } catch (Exception e) {
@@ -121,10 +130,8 @@ public class DefaultDeal {
 
         stringRedisTemplate.execute((RedisCallback<Void>)connection -> {
             for (TopicVo topicVo : topicVoList) {
-                connection.hDel((StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId)).getBytes(),
-                    topicVo.getTopicFilter().getBytes());
-                connection.hDel((StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter())).getBytes(),
-                    clientId.getBytes());
+                connection.hDel((StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId)).getBytes(), topicVo.getTopicFilter().getBytes());
+                connection.hDel((StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter())).getBytes(), clientId.getBytes());
             }
             return null;
         });
@@ -136,7 +143,7 @@ public class DefaultDeal {
         String payload = messageVo.getPayload();
         if (YesOrNo.YES.getNumber().equals(isRetain)) {
             // qos == 0 || payload 为零字节，清除该主题下的保留消息
-            if (MqttQoS.AT_MOST_ONCE == fromMqttQoS || StringUtils.isBlank(payload)) {
+            if (AT_MOST_ONCE == fromMqttQoS || StringUtils.isBlank(payload)) {
                 delTopicRetainMessage(messageVo.getTopic());
             }
             // 存储保留消息
@@ -144,7 +151,7 @@ public class DefaultDeal {
                 saveTopicRetainMessage(messageVo);
             }
         }
-        if (MqttQoS.EXACTLY_ONCE.equals(fromMqttQoS)) {
+        if (EXACTLY_ONCE.equals(fromMqttQoS)) {
             saveRecMessage(messageVo);
             return;
         }
@@ -173,8 +180,8 @@ public class DefaultDeal {
                     case EXACTLY_ONCE:
                         String messageKey = StoreKey.MESSAGE_KEY.formatKey(messageVo.getToClientId());
                         RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.SAVE_MESSAGE, Long.class);
-                        Long flag = stringRedisTemplate.execute(redisScript, Lists.newArrayList(messageKey),
-                            messageVo.getToMessageId(), JsonUtil.obj2String(messageVo));
+                        Long flag = stringRedisTemplate.execute(redisScript, Lists.newArrayList(messageKey), messageVo.getToMessageId(),
+                            JsonUtil.obj2String(messageVo));
                         if (flag != null) {
                             batchSendMessageVoList.add(messageVo);
                         }
@@ -184,8 +191,7 @@ public class DefaultDeal {
                 }
             }
             if (batchSendMessageVoList.size() >= 100 || i == matchMap.entrySet().size() - 1) {
-                stringRedisTemplate.convertAndSend(ChannelKey.SEND_MESSAGE.getKey(),
-                    JsonUtil.obj2String(batchSendMessageVoList));
+                stringRedisTemplate.convertAndSend(ChannelKey.SEND_MESSAGE.getKey(), JsonUtil.obj2String(batchSendMessageVoList));
                 batchSendMessageVoList.clear();
             }
         }
@@ -207,13 +213,11 @@ public class DefaultDeal {
     }
 
     public void saveTopicRetainMessage(MessageVo messageVo) {
-        EasyMqttRaftClient
-            .syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC.name(), messageVo.getTopic())));
+        EasyMqttRaftClient.syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC.name(), messageVo.getTopic())));
 
         // 远程存储保留消息
         messageVo.setToQos(messageVo.getFromQos());
-        stringRedisTemplate.opsForValue().set(StoreKey.RETAIN_MESSAGE_KEY.formatKey(messageVo.getTopic()),
-            JsonUtil.obj2String(messageVo));
+        stringRedisTemplate.opsForValue().set(StoreKey.RETAIN_MESSAGE_KEY.formatKey(messageVo.getTopic()), JsonUtil.obj2String(messageVo));
     }
 
     public void delTopicRetainMessage(String topic) {
@@ -235,8 +239,8 @@ public class DefaultDeal {
                 switch (MqttQoS.valueOf(messageVo.getToQos())) {
                     case AT_LEAST_ONCE:
                     case EXACTLY_ONCE:
-                        stringRedisTemplate.opsForHash().put(StoreKey.MESSAGE_KEY.formatKey(messageVo.getToClientId()),
-                            messageVo.getToMessageId(), JsonUtil.obj2String(messageVo));
+                        stringRedisTemplate.opsForHash().put(StoreKey.MESSAGE_KEY.formatKey(messageVo.getToClientId()), messageVo.getToMessageId(),
+                            JsonUtil.obj2String(messageVo));
                         break;
                     default:
                         break;
@@ -250,13 +254,12 @@ public class DefaultDeal {
     public void saveRecMessage(MessageVo messageVo) {
         String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(messageVo.getFromClientId());
         RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.SAVE_REC_MESSAGE);
-        stringRedisTemplate.execute(redisScript, Lists.newArrayList(recMessageKey),
-            String.valueOf(messageVo.getFromMessageId()), JsonUtil.obj2String(messageVo));
+        stringRedisTemplate.execute(redisScript, Lists.newArrayList(recMessageKey), String.valueOf(messageVo.getFromMessageId()),
+            JsonUtil.obj2String(messageVo));
     }
 
     public void delRecMessage(String clientId, Integer messageId) {
-        stringRedisTemplate.opsForHash().delete(StoreKey.REC_MESSAGE_KEY.formatKey(clientId),
-            String.valueOf(messageId));
+        stringRedisTemplate.opsForHash().delete(StoreKey.REC_MESSAGE_KEY.formatKey(clientId), String.valueOf(messageId));
     }
 
     public MessageVo getRecMessage(String clientId, Integer messageId) {
@@ -309,6 +312,7 @@ public class DefaultDeal {
 
         // 重发消息
         WorkerThreadPool.execute((a) -> {
+            // TODO: 2025/1/24 这里等publish报文完成再实现，以下逻辑仅供参考
             // 查询qos=1、未puback发送消息记录，重试推送publish报文任务
 
             // 查询qos=2、未comp发送该消息记录，其中未rec的重试推送publish报文任务，已rec需要重试推送pubrel报文任务
@@ -316,6 +320,70 @@ public class DefaultDeal {
             // 这里重试任务，即根据任务id更新任务状态为READY的任务执行时间
 
         });
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void publish(ChannelHandlerContext channelHandlerContext, Qos receiveQos, String topic, String receivePacketId, String fromClientId,
+        String payload) {
+        if (receiveQos == null) {
+            return;
+        }
+
+        Date now = new Date();
+
+        if (Qos.LEVEL_O == receiveQos) {
+            ReceiveMessageDto receiveMessageDto = new ReceiveMessageDto();
+            receiveMessageDto.setReceiveQos(receiveQos);
+            receiveMessageDto.setTopic(topic);
+            // qos=0的情况下，没有packetId
+            receiveMessageDto.setReceivePacketId(UUID.randomUUID().toString());
+            receiveMessageDto.setFromClientId(fromClientId);
+            receiveMessageDto.setPayload(payload);
+            receiveMessageDto.setIsReceivePubrel(YesOrNo.NO);
+            receiveMessageDto.setReceiveTime(now.getTime());
+            receiveMessageDao.insert(receiveMessageDto);
+
+            DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
+            dispatchMessageParam.setReceiveMessageId(receiveMessageDto.getId());
+            asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(receiveMessageDto.getId()),
+                AsyncJobBusinessType.DISPATCH_MESSAGE, dispatchMessageParam, now);
+            return;
+        }
+
+        ReceiveMessageDto existMessage = receiveMessageDao.getExistMessage(fromClientId, receivePacketId);
+        if (existMessage == null) {
+            try {
+                existMessage = new ReceiveMessageDto();
+                existMessage.setReceiveQos(receiveQos);
+                existMessage.setTopic(topic);
+                existMessage.setReceivePacketId(receivePacketId);
+                existMessage.setFromClientId(fromClientId);
+                existMessage.setPayload(payload);
+                existMessage.setIsReceivePubrel(YesOrNo.NO);
+                existMessage.setReceiveTime(now.getTime());
+                receiveMessageDao.insert(existMessage);
+            } catch (DuplicateKeyException e) {
+                log.warn("已接收消息[{}][{}]", fromClientId, receivePacketId);
+                return;
+            }
+        } else {
+            if (!existMessage.getReceiveQos().equals(receiveQos)) {
+                throw new RuntimeException("不支持的报文");
+            }
+        }
+
+        if (Qos.LEVEL_1 == receiveQos) {
+            MqttMessage publishAckMessage = MqttMessageBuilders.pubAck().packetId(Integer.parseInt(receivePacketId)).build();
+            channelHandlerContext.writeAndFlush(publishAckMessage);
+
+            DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
+            dispatchMessageParam.setReceiveMessageId(existMessage.getId());
+            asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(existMessage.getId()), AsyncJobBusinessType.DISPATCH_MESSAGE,
+                dispatchMessageParam, now);
+            return;
+        }
+
+        MqttUtil.sendPubRec(channelHandlerContext, Integer.parseInt(receivePacketId));
     }
 
     private void saveClientInfo(String clientId, boolean isCleanSession) {

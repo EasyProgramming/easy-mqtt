@@ -9,9 +9,9 @@ package com.ep.mqtt.server.metadata;
 public enum AsyncJobBusinessType implements BaseEnum<String> {
 
     /**
-     * 发送publish报文
+     * 分发消息
      */
-    SEND_PUBLISH("SEND_PUBLISH", "发送publish报文"),
+    DISPATCH_MESSAGE("DISPATCH_MESSAGE", "分发消息", "DISPATCH_MESSAGE_%s"),
 
     ;
 
@@ -19,9 +19,12 @@ public enum AsyncJobBusinessType implements BaseEnum<String> {
 
     private final String desc;
 
-    AsyncJobBusinessType(String code, String desc) {
+    private final String businessIdTemplate;
+
+    AsyncJobBusinessType(String code, String desc, String businessIdTemplate) {
         this.code = code;
         this.desc = desc;
+        this.businessIdTemplate = businessIdTemplate;
     }
 
     @Override
@@ -32,5 +35,9 @@ public enum AsyncJobBusinessType implements BaseEnum<String> {
     @Override
     public String getDesc() {
         return desc;
+    }
+
+    public String getBusinessId(Object... values) {
+        return String.format(this.businessIdTemplate, values);
     }
 }
