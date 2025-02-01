@@ -151,11 +151,10 @@ CREATE INDEX "client_subscribe_index_2"
 -- ----------------------------
 -- Indexes structure for table receive_message
 -- ----------------------------
-CREATE INDEX "receive_message_index_1"
+CREATE UNIQUE INDEX "receive_message_index_1"
     ON "receive_message" (
                           "from_client_id" ASC,
-                          "receive_message_id" ASC,
-                          "is_complete" ASC
+                          "receive_packet_id" ASC
         );
 CREATE INDEX "receive_message_index_2"
     ON "receive_message" (
@@ -163,7 +162,7 @@ CREATE INDEX "receive_message_index_2"
         );
 CREATE INDEX "receive_message_index_3"
     ON "receive_message" (
-                          "valid_time" ASC
+                          "receive_time" ASC
         );
 
 -- ----------------------------
@@ -180,7 +179,7 @@ CREATE INDEX "retain_message_index_1"
 CREATE INDEX "send_message_index_1"
     ON "send_message" (
                        "to_client_id" ASC,
-                       "send_message_id" ASC
+                       "send_packet_id" ASC
         );
 CREATE INDEX "send_message_index_2"
     ON "send_message" (
