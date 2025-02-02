@@ -116,6 +116,18 @@ CREATE TABLE "topic_filter"
 );
 
 -- ----------------------------
+-- Table structure for receive_qos2_message_unique
+-- ----------------------------
+CREATE TABLE "receive_qos2_message_unique"
+(
+    "id"                 integer NOT NULL,
+    "from_client_id"     text    NOT NULL,
+    "receive_packet_id"  text    NOT NULL,
+    "receive_message_id" integer NOT NULL,
+    PRIMARY KEY ("id")
+);
+
+-- ----------------------------
 -- Indexes structure for table async_job
 -- ----------------------------
 CREATE UNIQUE INDEX "async_job_index_1"
@@ -151,7 +163,7 @@ CREATE INDEX "client_subscribe_index_2"
 -- ----------------------------
 -- Indexes structure for table receive_message
 -- ----------------------------
-CREATE UNIQUE INDEX "receive_message_index_1"
+CREATE INDEX "receive_message_index_1"
     ON "receive_message" (
                           "from_client_id" ASC,
                           "receive_packet_id" ASC
@@ -196,4 +208,13 @@ CREATE INDEX "send_message_index_3"
 CREATE UNIQUE INDEX "topic_filter_index_1"
     ON "topic_filter" (
                        "topic_filter" ASC
+        );
+
+-- ----------------------------
+-- Indexes structure for table receive_qos2_message_unique
+-- ----------------------------
+CREATE UNIQUE INDEX "receive_qos2_message_unique_index_1"
+    ON "receive_qos2_message_unique" (
+                                      "from_client_id" ASC,
+                                      "receive_packet_id" ASC
         );
