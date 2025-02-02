@@ -38,4 +38,8 @@ public class MqttUtil {
         channelHandlerContext
             .writeAndFlush(MqttMessageFactory.newMessage(mqttFixedHeader, mqttMessageIdVariableHeader, null));
     }
+
+    public static void sendPubAck(ChannelHandlerContext channelHandlerContext, Integer messageId) {
+        channelHandlerContext.writeAndFlush(MqttMessageBuilders.pubAck().packetId(messageId).build());
+    }
 }

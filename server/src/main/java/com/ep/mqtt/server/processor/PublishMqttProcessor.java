@@ -35,7 +35,7 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
         String dataStr = new String(data);
 
         defaultDeal.publish(channelHandlerContext, BaseEnum.getByCode(mqttPublishMessage.fixedHeader().qosLevel(), Qos.class),
-            mqttPublishMessage.variableHeader().topicName(), String.valueOf(mqttPublishMessage.variableHeader().packetId()),
+            mqttPublishMessage.variableHeader().topicName(), mqttPublishMessage.variableHeader().packetId(),
             NettyUtil.getClientId(channelHandlerContext), dataStr, mqttPublishMessage.fixedHeader().isRetain());
     }
 

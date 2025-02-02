@@ -19,10 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
-import com.ep.mqtt.server.db.dao.ReceiveMessageDao;
+import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.ClientDto;
-import com.ep.mqtt.server.db.dto.ReceiveMessageDto;
+import com.ep.mqtt.server.db.dto.ReceiveQos2MessageDto;
 import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.job.DispatchMessageParam;
 import com.ep.mqtt.server.metadata.*;
@@ -38,8 +38,6 @@ import com.google.common.collect.Lists;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageBuilders;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -73,7 +71,7 @@ public class DefaultDeal {
     private ClientSubscribeDao clientSubscribeDao;
 
     @Resource
-    private ReceiveMessageDao receiveMessageDao;
+    private ReceiveQos2MessageDao receiveQos2MessageDao;
 
     @Resource
     private SendMessageDao sendMessageDao;
@@ -97,7 +95,7 @@ public class DefaultDeal {
         clientDao.deleteByClientId(clientId);
         clientSubscribeDao.deleteByClientId(clientId);
         // TODO: 2025/1/5 在关于消息的异步任务中，如果发现消息不存在，则视为执行成功
-        receiveMessageDao.deleteByFromClientId(clientId);
+        receiveQos2MessageDao.deleteByFromClientId(clientId);
         sendMessageDao.deleteByToClientId(clientId);
     }
 
@@ -323,7 +321,7 @@ public class DefaultDeal {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void publish(ChannelHandlerContext channelHandlerContext, Qos receiveQos, String topic, String receivePacketId, String fromClientId,
+    public void publish(ChannelHandlerContext channelHandlerContext, Qos receiveQos, String topic, Integer receivePacketId, String fromClientId,
         String payload, boolean isRetain) {
         if (receiveQos == null) {
             return;
@@ -331,61 +329,40 @@ public class DefaultDeal {
 
         Date now = new Date();
 
-        if (Qos.LEVEL_O == receiveQos) {
-            ReceiveMessageDto receiveMessageDto = new ReceiveMessageDto();
-            receiveMessageDto.setReceiveQos(receiveQos);
-            receiveMessageDto.setTopic(topic);
-            // qos=0的情况下，没有packetId
-            receiveMessageDto.setReceivePacketId(UUID.randomUUID().toString());
-            receiveMessageDto.setFromClientId(fromClientId);
-            receiveMessageDto.setPayload(payload);
-            receiveMessageDto.setIsReceivePubrel(YesOrNo.NO);
-            receiveMessageDto.setReceiveTime(now.getTime());
-            receiveMessageDao.insert(receiveMessageDto);
-
-            DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
-            dispatchMessageParam.setReceiveMessageId(receiveMessageDto.getId());
-            asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(receiveMessageDto.getId()),
-                AsyncJobBusinessType.DISPATCH_MESSAGE, dispatchMessageParam, now);
-            return;
-        }
-
-        ReceiveMessageDto existMessage = receiveMessageDao.getExistMessage(fromClientId, receivePacketId);
-        if (existMessage == null) {
+        if (Qos.LEVEL_2 == receiveQos) {
             try {
-                existMessage = new ReceiveMessageDto();
-                existMessage.setReceiveQos(receiveQos);
-                existMessage.setTopic(topic);
-                existMessage.setReceivePacketId(receivePacketId);
-                existMessage.setFromClientId(fromClientId);
-                existMessage.setPayload(payload);
-                existMessage.setIsReceivePubrel(YesOrNo.NO);
-                existMessage.setReceiveTime(now.getTime());
-                receiveMessageDao.insert(existMessage);
+                ReceiveQos2MessageDto receiveQos2MessageDto = new ReceiveQos2MessageDto();
+                receiveQos2MessageDto.setReceiveQos(receiveQos);
+                receiveQos2MessageDto.setTopic(topic);
+                receiveQos2MessageDto.setReceivePacketId(receivePacketId);
+                receiveQos2MessageDto.setFromClientId(fromClientId);
+                receiveQos2MessageDto.setPayload(payload);
+                receiveQos2MessageDto.setIsReceivePubrel(YesOrNo.NO);
+                receiveQos2MessageDto.setReceiveTime(now.getTime());
+
+                receiveQos2MessageDao.insert(receiveQos2MessageDto);
             } catch (DuplicateKeyException e) {
-                log.warn("已接收消息 fromClientId:[{}], receivePacketId:[{}]", fromClientId, receivePacketId);
-                return;
+                log.warn("重复的消息 fromClientId:[{}], receivePacketId:[{}]", fromClientId, receivePacketId);
             }
-        } else {
-            if (!existMessage.getReceiveQos().equals(receiveQos)) {
-                log.error("qos不一致 fromClientId:[{}], receivePacketId:[{}], existQos:[{}], receiveQos:[{}]", fromClientId, receivePacketId,
-                    existMessage.getReceiveQos().getCode(), receiveQos.getCode());
-                throw new RuntimeException("qos不一致");
-            }
-        }
 
-        if (Qos.LEVEL_1 == receiveQos) {
-            MqttMessage publishAckMessage = MqttMessageBuilders.pubAck().packetId(Integer.parseInt(receivePacketId)).build();
-            channelHandlerContext.writeAndFlush(publishAckMessage);
-
-            DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
-            dispatchMessageParam.setReceiveMessageId(existMessage.getId());
-            asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(existMessage.getId()), AsyncJobBusinessType.DISPATCH_MESSAGE,
-                dispatchMessageParam, now);
+            MqttUtil.sendPubRec(channelHandlerContext, receivePacketId);
             return;
         }
 
-        MqttUtil.sendPubRec(channelHandlerContext, Integer.parseInt(receivePacketId));
+        DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
+        dispatchMessageParam.setReceiveQos(receiveQos);
+        dispatchMessageParam.setTopic(topic);
+        dispatchMessageParam.setReceivePacketId(receivePacketId);
+        dispatchMessageParam.setFromClientId(fromClientId);
+        dispatchMessageParam.setPayload(payload);
+        asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
+            AsyncJobBusinessType.DISPATCH_MESSAGE, dispatchMessageParam, now);
+
+        if (Qos.LEVEL_0 == receiveQos) {
+            return;
+        }
+
+        MqttUtil.sendPubAck(channelHandlerContext, receivePacketId);
     }
 
     private void saveClientInfo(String clientId, boolean isCleanSession) {

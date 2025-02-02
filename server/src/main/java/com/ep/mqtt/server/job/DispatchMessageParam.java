@@ -1,5 +1,7 @@
 package com.ep.mqtt.server.job;
 
+import com.ep.mqtt.server.metadata.Qos;
+
 import lombok.Data;
 
 /**
@@ -9,6 +11,14 @@ import lombok.Data;
 @Data
 public class DispatchMessageParam {
 
-    private Long receiveMessageId;
+    private Qos receiveQos;
+
+    private String topic;
+
+    private Integer receivePacketId;
+
+    private String fromClientId;
+
+    private String payload;
 
 }

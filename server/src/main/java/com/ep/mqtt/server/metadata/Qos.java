@@ -8,7 +8,7 @@ public enum Qos implements BaseEnum<Integer> {
     /**
      * Qos=0
      */
-    LEVEL_O(0, "Qos=0"),
+    LEVEL_0(0, "Qos=0"),
     /**
      * Qos=1
      */
