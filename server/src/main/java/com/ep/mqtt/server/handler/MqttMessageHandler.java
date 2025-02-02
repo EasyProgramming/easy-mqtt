@@ -64,6 +64,13 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         }
     }
 
+    /**
+     * 连接断开的事件 <br/>
+     * 为什么不在这里清理客户端的数据：1-耗费性能 2-会在客户端重连时进行清理（如果长时间未重连，按过期数据清理）
+     * 
+     * @param ctx
+     *            上下文
+     */
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
         log.info("client session id: [{}], client id: [{}] inactive", NettyUtil.getSessionId(ctx),
