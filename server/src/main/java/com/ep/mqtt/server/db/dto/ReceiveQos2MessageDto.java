@@ -21,7 +21,7 @@ public class ReceiveQos2MessageDto {
 
     private String topic;
 
-    private String receivePacketId;
+    private Integer receivePacketId;
 
     private String fromClientId;
 
