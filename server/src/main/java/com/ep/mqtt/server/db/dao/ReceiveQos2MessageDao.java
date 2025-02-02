@@ -4,14 +4,14 @@ import org.apache.ibatis.annotations.Mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.ep.mqtt.server.db.dto.ReceiveMessageDto;
+import com.ep.mqtt.server.db.dto.ReceiveQos2MessageDto;
 
 /**
  * @author zbz
  * @date 2024/12/30 17:37
  */
 @Mapper
-public interface ReceiveMessageDao extends BaseMapper<ReceiveMessageDto> {
+public interface ReceiveQos2MessageDao extends BaseMapper<ReceiveQos2MessageDto> {
 
     /**
      * 根据来源clientId删除
@@ -20,7 +20,7 @@ public interface ReceiveMessageDao extends BaseMapper<ReceiveMessageDto> {
      *            客户端id
      */
     default void deleteByFromClientId(String fromClientId) {
-        delete(Wrappers.lambdaQuery(ReceiveMessageDto.class).eq(ReceiveMessageDto::getFromClientId, fromClientId));
+        delete(Wrappers.lambdaQuery(ReceiveQos2MessageDto.class).eq(ReceiveQos2MessageDto::getFromClientId, fromClientId));
     }
 
     /**
@@ -32,9 +32,9 @@ public interface ReceiveMessageDao extends BaseMapper<ReceiveMessageDto> {
      *            收到的标识符
      * @return 命中的消息
      */
-    default ReceiveMessageDto getExistMessage(String fromClientId, String receivePacketId) {
-        return selectOne(Wrappers.lambdaQuery(ReceiveMessageDto.class).eq(ReceiveMessageDto::getFromClientId, fromClientId)
-            .eq(ReceiveMessageDto::getReceivePacketId, receivePacketId));
+    default ReceiveQos2MessageDto getExistMessage(String fromClientId, String receivePacketId) {
+        return selectOne(Wrappers.lambdaQuery(ReceiveQos2MessageDto.class).eq(ReceiveQos2MessageDto::getFromClientId, fromClientId)
+            .eq(ReceiveQos2MessageDto::getReceivePacketId, receivePacketId));
     }
 
 }

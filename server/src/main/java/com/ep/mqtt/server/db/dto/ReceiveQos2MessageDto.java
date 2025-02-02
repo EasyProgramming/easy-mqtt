@@ -13,7 +13,7 @@ import lombok.Data;
  */
 @Data
 @TableName(value = "receive_message")
-public class ReceiveMessageDto {
+public class ReceiveQos2MessageDto {
     @TableId
     private Long id;
 
