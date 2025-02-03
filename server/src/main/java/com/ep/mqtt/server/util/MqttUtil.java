@@ -42,4 +42,10 @@ public class MqttUtil {
     public static void sendPubAck(ChannelHandlerContext channelHandlerContext, Integer messageId) {
         channelHandlerContext.writeAndFlush(MqttMessageBuilders.pubAck().packetId(messageId).build());
     }
+
+    public static void sendPubComp(ChannelHandlerContext channelHandlerContext, Integer messageId) {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(messageId);
+        channelHandlerContext.writeAndFlush(MqttMessageFactory.newMessage(mqttFixedHeader, mqttMessageIdVariableHeader, null));
+    }
 }

@@ -1,10 +1,7 @@
 package com.ep.mqtt.server.processor;
 
-import javax.annotation.Resource;
-
 import org.springframework.stereotype.Component;
 
-import com.ep.mqtt.server.deal.DefaultDeal;
 import com.ep.mqtt.server.metadata.BaseEnum;
 import com.ep.mqtt.server.metadata.Qos;
 import com.ep.mqtt.server.util.NettyUtil;
@@ -24,9 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessage> {
-
-    @Resource
-    private DefaultDeal defaultDeal;
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttPublishMessage mqttPublishMessage) {

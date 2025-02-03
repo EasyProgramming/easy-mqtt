@@ -67,7 +67,6 @@ CREATE TABLE "receive_qos2_message"
     "receive_packet_id" integer NOT NULL,
     "from_client_id"    text    NOT NULL,
     "payload"           text    NOT NULL,
-    "is_receive_pubrel" text    NOT NULL,
     "receive_time"      integer NOT NULL,
     PRIMARY KEY ("id")
 );

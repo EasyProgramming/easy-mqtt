@@ -24,15 +24,29 @@ public interface ReceiveQos2MessageDao extends BaseMapper<ReceiveQos2MessageDto>
     }
 
     /**
-     * 获取已存在的消息
+     * 根据客户端id、消息id删除
      * 
      * @param fromClientId
-     *            来源的clientId
+     *            客户端id
      * @param receivePacketId
-     *            收到的标识符
-     * @return 命中的消息
+     *            消息id
+     * @return 是否删除成功
      */
-    default ReceiveQos2MessageDto getExistMessage(String fromClientId, String receivePacketId) {
+    default boolean deleteByFromClientIdAndReceivePacketId(String fromClientId, Integer receivePacketId) {
+        return delete(Wrappers.lambdaUpdate(ReceiveQos2MessageDto.class).eq(ReceiveQos2MessageDto::getFromClientId, fromClientId)
+            .eq(ReceiveQos2MessageDto::getReceivePacketId, receivePacketId)) > 0;
+    }
+
+    /**
+     * 根据客户端id、消息id查询
+     *
+     * @param fromClientId
+     *            客户端id
+     * @param receivePacketId
+     *            消息id
+     * @return 是否删除成功
+     */
+    default ReceiveQos2MessageDto selectByFromClientIdAndReceivePacketId(String fromClientId, Integer receivePacketId) {
         return selectOne(Wrappers.lambdaQuery(ReceiveQos2MessageDto.class).eq(ReceiveQos2MessageDto::getFromClientId, fromClientId)
             .eq(ReceiveQos2MessageDto::getReceivePacketId, receivePacketId));
     }

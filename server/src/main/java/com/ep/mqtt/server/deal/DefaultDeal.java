@@ -1,8 +1,5 @@
 package com.ep.mqtt.server.deal;
 
-import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
-import static io.netty.handler.codec.mqtt.MqttQoS.EXACTLY_ONCE;
-
 import java.util.*;
 
 import javax.annotation.Resource;
@@ -135,27 +132,6 @@ public class DefaultDeal {
         });
     }
 
-    public void dealMessage(MessageVo messageVo) {
-        Integer isRetain = messageVo.getIsRetained();
-        MqttQoS fromMqttQoS = MqttQoS.valueOf(messageVo.getFromQos());
-        String payload = messageVo.getPayload();
-        if (YesOrNo.YES.getNumber().equals(isRetain)) {
-            // qos == 0 || payload 为零字节，清除该主题下的保留消息
-            if (AT_MOST_ONCE == fromMqttQoS || StringUtils.isBlank(payload)) {
-                delTopicRetainMessage(messageVo.getTopic());
-            }
-            // 存储保留消息
-            else {
-                saveTopicRetainMessage(messageVo);
-            }
-        }
-        if (EXACTLY_ONCE.equals(fromMqttQoS)) {
-            saveRecMessage(messageVo);
-            return;
-        }
-        sendMessage(messageVo);
-    }
-
     public void sendMessage(MessageVo messageVo) {
         long startTime = System.currentTimeMillis();
         // 先根据topic做匹配
@@ -208,19 +184,6 @@ public class DefaultDeal {
 
     public void delMessage(String clientId, Integer messageId) {
         stringRedisTemplate.opsForHash().delete(StoreKey.MESSAGE_KEY.formatKey(clientId), String.valueOf(messageId));
-    }
-
-    public void saveTopicRetainMessage(MessageVo messageVo) {
-        EasyMqttRaftClient.syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC.name(), messageVo.getTopic())));
-
-        // 远程存储保留消息
-        messageVo.setToQos(messageVo.getFromQos());
-        stringRedisTemplate.opsForValue().set(StoreKey.RETAIN_MESSAGE_KEY.formatKey(messageVo.getTopic()), JsonUtil.obj2String(messageVo));
-    }
-
-    public void delTopicRetainMessage(String topic) {
-        // 远程删除保留消息
-        stringRedisTemplate.delete(StoreKey.RETAIN_MESSAGE_KEY.formatKey(topic));
     }
 
     public void sendTopicRetainMessage(String clientId, List<TopicVo> successSubscribeTopicList) {
@@ -337,7 +300,6 @@ public class DefaultDeal {
                 receiveQos2MessageDto.setReceivePacketId(receivePacketId);
                 receiveQos2MessageDto.setFromClientId(fromClientId);
                 receiveQos2MessageDto.setPayload(payload);
-                receiveQos2MessageDto.setIsReceivePubrel(YesOrNo.NO);
                 receiveQos2MessageDto.setReceiveTime(now.getTime());
 
                 receiveQos2MessageDao.insert(receiveQos2MessageDto);
@@ -363,6 +325,25 @@ public class DefaultDeal {
         }
 
         MqttUtil.sendPubAck(channelHandlerContext, receivePacketId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void pubRel(ChannelHandlerContext channelHandlerContext, Integer receivePacketId, String fromClientId) {
+        ReceiveQos2MessageDto receiveQos2MessageDto = receiveQos2MessageDao.selectByFromClientIdAndReceivePacketId(fromClientId, receivePacketId);
+        if (receiveQos2MessageDto != null) {
+            if (receiveQos2MessageDao.deleteByFromClientIdAndReceivePacketId(fromClientId, receivePacketId)) {
+                DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
+                dispatchMessageParam.setReceiveQos(receiveQos2MessageDto.getReceiveQos());
+                dispatchMessageParam.setTopic(receiveQos2MessageDto.getTopic());
+                dispatchMessageParam.setReceivePacketId(receiveQos2MessageDto.getReceivePacketId());
+                dispatchMessageParam.setFromClientId(receiveQos2MessageDto.getFromClientId());
+                dispatchMessageParam.setPayload(receiveQos2MessageDto.getPayload());
+                asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
+                    AsyncJobBusinessType.DISPATCH_MESSAGE, dispatchMessageParam, new Date());
+            }
+        }
+
+        MqttUtil.sendPubComp(channelHandlerContext, receivePacketId);
     }
 
     private void saveClientInfo(String clientId, boolean isCleanSession) {
