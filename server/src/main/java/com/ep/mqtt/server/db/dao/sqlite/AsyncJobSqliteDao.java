@@ -1,0 +1,30 @@
+package com.ep.mqtt.server.db.dao.sqlite;
+
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.ep.mqtt.server.db.dao.AsyncJobBaseDao;
+import com.ep.mqtt.server.db.dto.AsyncJobDto;
+import org.apache.ibatis.annotations.Mapper;
+
+/**
+ * @author zbz
+ * @date 2024/12/30 17:37
+ */
+@Mapper
+public interface AsyncJobSqliteDao extends AsyncJobBaseDao {
+
+    /**
+     * 对任务加锁
+     * 
+     * @param businessId
+     *            业务id
+     * @return 任务数据
+     */
+    @Override
+    default AsyncJobDto lock(String businessId) {
+        update(Wrappers.lambdaUpdate(AsyncJobDto.class).set(AsyncJobDto::getBusinessId, businessId)
+            .eq(AsyncJobDto::getBusinessId, businessId));
+
+        return selectOne(Wrappers.lambdaUpdate(AsyncJobDto.class).eq(AsyncJobDto::getBusinessId, businessId));
+    }
+
+}

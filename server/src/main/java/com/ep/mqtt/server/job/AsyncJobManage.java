@@ -7,7 +7,7 @@ import javax.annotation.Resource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
-import com.ep.mqtt.server.db.dao.AsyncJobDao;
+import com.ep.mqtt.server.db.dao.sqlite.AsyncJobSqliteDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AsyncJobManage {
 
     @Resource
-    private AsyncJobDao asyncJobDao;
+    private AsyncJobSqliteDao asyncJobDao;
 
     /**
      * 新增异步任务

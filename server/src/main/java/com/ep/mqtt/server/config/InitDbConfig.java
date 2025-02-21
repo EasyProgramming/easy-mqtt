@@ -3,7 +3,11 @@ package com.ep.mqtt.server.config;
 import com.ep.mqtt.server.db.component.AbstractDb;
 import com.ep.mqtt.server.metadata.BaseEnum;
 import com.ep.mqtt.server.metadata.DriverClass;
+import com.ep.mqtt.server.metadata.RunMode;
 import com.zaxxer.hikari.HikariDataSource;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.Resource;
@@ -40,6 +44,18 @@ public class InitDbConfig {
         throw new RuntimeException(String.format("缺失该驱动[%s]的实现类", dataSource.getDriverClassName()));
     }
 
+    @ConditionalOnProperty(prefix = "mqtt.server", value = "runMode", havingValue = "standalone")
+    @Configuration
+    @MapperScan(value = {"com.ep.mqtt.server.db.dao.sqlite"})
+    public static class SqliteMapperScan {
 
+    }
+
+    @ConditionalOnProperty(prefix = "mqtt.server", value = "runMode", havingValue = "cluster")
+    @Configuration
+    @MapperScan(value = {"com.ep.mqtt.server.db.dao.mysql"})
+    public static class MySqlMapperScan {
+
+    }
 
 }

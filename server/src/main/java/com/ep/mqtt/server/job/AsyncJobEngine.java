@@ -1,20 +1,7 @@
 package com.ep.mqtt.server.job;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
-import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-
 import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
-import com.ep.mqtt.server.db.dao.AsyncJobDao;
+import com.ep.mqtt.server.db.dao.AsyncJobBaseDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
@@ -23,8 +10,18 @@ import com.ep.mqtt.server.metadata.Constant;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.TransactionUtil;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author zbz
@@ -41,7 +38,7 @@ public class AsyncJobEngine {
         new ScheduledThreadPoolExecutor(Constant.PROCESSOR_NUM, new ThreadFactoryBuilder().setNameFormat("async-job-query-%s").build());
 
     @Resource
-    private AsyncJobDao asyncJobDao;
+    private AsyncJobBaseDao asyncJobDao;
 
     @Resource
     private TransactionUtil transactionUtil;
