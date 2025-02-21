@@ -43,10 +43,9 @@ public class AsyncJobEngine {
     @Resource
     private TransactionUtil transactionUtil;
 
-    private Map<AsyncJobBusinessType, AbstractJobProcessor<Object>> processorMap;
+    private final Map<AsyncJobBusinessType, AbstractJobProcessor<Object>> processorMap;
 
-    @PostConstruct
-    public void init(List<AbstractJobProcessor<Object>> abstractJobProcessorList) {
+    public AsyncJobEngine(List<AbstractJobProcessor<Object>> abstractJobProcessorList){
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryJobRunnable(), 60, 1, TimeUnit.SECONDS);
 
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryTimeoutJobRunnable(), 1, 5, TimeUnit.MINUTES);
