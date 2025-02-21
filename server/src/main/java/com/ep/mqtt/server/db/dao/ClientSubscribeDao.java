@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 
+import java.util.List;
+import java.util.Set;
+
 /**
  * @author zbz
  * @date 2024/12/30 17:37
@@ -23,4 +26,14 @@ public interface ClientSubscribeDao extends BaseMapper<ClientSubscribeDto> {
         delete(Wrappers.lambdaQuery(ClientSubscribeDto.class).eq(ClientSubscribeDto::getClientId, clientId));
     }
 
+    /**
+     * 获取客户端的订阅关系
+     * @param clientId 客户端id
+     * @param topicFilterSet 指定的topicFilter
+     * @return 客户端的订阅关系
+     */
+    default List<ClientSubscribeDto> getClientSubscribe(String clientId, Set<String> topicFilterSet){
+        return selectList(Wrappers.lambdaQuery(ClientSubscribeDto.class).eq(ClientSubscribeDto::getClientId, clientId)
+                .in(ClientSubscribeDto::getTopicFilter, topicFilterSet));
+    }
 }

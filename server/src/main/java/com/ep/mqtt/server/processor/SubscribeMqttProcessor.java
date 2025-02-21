@@ -27,31 +27,8 @@ public class SubscribeMqttProcessor extends AbstractMqttProcessor<MqttSubscribeM
 
     @Override
     public void process(ChannelHandlerContext channelHandlerContext, MqttSubscribeMessage mqttMessage) {
-        String clientId = NettyUtil.getClientId(channelHandlerContext);
-        List<TopicVo> topicVoList = Lists.newArrayList();
-        for (MqttTopicSubscription mqttTopicSubscription : mqttMessage.payload().topicSubscriptions()) {
-            TopicVo topicVo = new TopicVo();
-            topicVo.setQos(mqttTopicSubscription.qualityOfService().value());
-            topicVo.setTopicFilter(mqttTopicSubscription.topicName());
-            topicVoList.add(topicVo);
-        }
-        List<Integer> subscribeResultList = defaultDeal.subscribe(clientId, topicVoList);
-        List<TopicVo> successSubscribeTopicList = Lists.newArrayList();
-        List<MqttQoS> mqttQosList = Lists.newArrayList();
-        for (int i = 0; i < subscribeResultList.size(); i++) {
-            Integer qosValue = subscribeResultList.get(i);
-            mqttQosList.add(MqttQoS.valueOf(qosValue));
-            if (MqttQoS.FAILURE.value() != qosValue) {
-                successSubscribeTopicList.add(topicVoList.get(i));
-            }
-        }
-        MqttQoS[] qoses = {};
-        mqttQosList.toArray(qoses);
-        int subMessageId = mqttMessage.variableHeader().messageId();
-        MqttSubAckMessage mqttSubAckMessage =
-            MqttMessageBuilders.subAck().addGrantedQoses(qoses).packetId(subMessageId).build();
-        channelHandlerContext.writeAndFlush(mqttSubAckMessage);
-        WorkerThreadPool.execute(event -> defaultDeal.sendTopicRetainMessage(clientId, successSubscribeTopicList));
+        defaultDeal.subscribe(channelHandlerContext,mqttMessage.variableHeader().messageId(), NettyUtil.getClientId(channelHandlerContext),
+                mqttMessage.payload().topicSubscriptions());
     }
 
     @Override

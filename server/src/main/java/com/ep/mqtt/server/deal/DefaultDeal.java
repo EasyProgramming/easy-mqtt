@@ -1,9 +1,15 @@
 package com.ep.mqtt.server.deal;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.annotation.Resource;
 
+import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
+import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
+import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
+import com.google.common.collect.Sets;
+import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.RedisCallback;
@@ -38,6 +44,7 @@ import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 
 /**
  * 请求broker
@@ -96,26 +103,69 @@ public class DefaultDeal {
         sendMessageDao.deleteByToClientId(clientId);
     }
 
-    public List<Integer> subscribe(String clientId, List<TopicVo> topicVoList) {
-        List<Integer> subscribeResultList = Lists.newArrayList();
-        for (TopicVo topicVo : topicVoList) {
-            try {
-                TopicUtil.validateTopicFilter(topicVo.getTopicFilter());
+    /**
+     * 处理订阅报文（暂不支持保留消息）
+     * @param channelHandlerContext netty上下文
+     * @param subMessageId 订阅报文的消息id
+     * @param clientId 客户端id
+     * @param clientSubscribeList 订阅的topic filter列表
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void subscribe(ChannelHandlerContext channelHandlerContext, int subMessageId, String clientId,
+                          List<MqttTopicSubscription> clientSubscribeList) {
+        Date now = new Date();
 
-                stringRedisTemplate.opsForHash().put(StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId), topicVo.getTopicFilter(),
-                    String.valueOf(topicVo.getQos()));
+        List<ClientSubscribeDto> existClientSubscribeList = clientSubscribeDao.getClientSubscribe(clientId,
+                clientSubscribeList.stream().map(MqttTopicSubscription::topicName).collect(Collectors.toSet()));
 
-                stringRedisTemplate.opsForHash().put(StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter()), clientId,
-                    String.valueOf(topicVo.getQos()));
+        Map<String, ClientSubscribeDto> existClientSubscribeMap =
+                existClientSubscribeList.stream().collect(Collectors.toMap(ClientSubscribeDto::getTopicFilter, b -> b));
 
-                EasyMqttRaftClient.syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.ADD_TOPIC_FILTER, topicVo.getTopicFilter())));
+        int index = 0;
+        MqttQoS[] qoses = new MqttQoS[clientSubscribeList.size()];
+        Set<String> editTopicFilterSet = Sets.newHashSet();
+        List<ClientSubscribeDto> editClientSubscribeDtoList = Lists.newArrayList();
+        for (MqttTopicSubscription clientSubscribe : clientSubscribeList){
+            qoses[index] = clientSubscribe.qualityOfService();
+            index++;
+            Qos subscribeQos = BaseEnum.getByCode(clientSubscribe.qualityOfService().value(), Qos.class);
 
-                subscribeResultList.add(topicVo.getQos());
-            } catch (Exception e) {
-                subscribeResultList.add(MqttQoS.FAILURE.value());
+            ClientSubscribeDto existClientSubscribeDto = existClientSubscribeMap.get(clientSubscribe.topicName());
+            if (existClientSubscribeDto != null){
+                if (existClientSubscribeDto.getQos() != subscribeQos){
+                    ClientSubscribeDto update = new ClientSubscribeDto();
+                    update.setId(existClientSubscribeDto.getId());
+                    update.setQos(subscribeQos);
+                    update.setSubscribeTime(now.getTime());
+
+                    editClientSubscribeDtoList.add(update);
+                    editTopicFilterSet.add(existClientSubscribeDto.getTopicFilter());
+                }
+
+                continue;
             }
+
+            ClientSubscribeDto insert = new ClientSubscribeDto();
+            insert.setQos(subscribeQos);
+            insert.setClientId(clientId);
+            insert.setSubscribeTime(now.getTime());
+            insert.setTopicFilter(clientSubscribe.topicName());
+
+            editClientSubscribeDtoList.add(insert);
+            editTopicFilterSet.add(clientSubscribe.topicName());
         }
-        return subscribeResultList;
+
+        if (!CollectionUtils.isEmpty(editTopicFilterSet)){
+            clientSubscribeDao.insertOrUpdate(editClientSubscribeDtoList);
+
+            AddTopicFilter addTopicFilter = new AddTopicFilter();
+            addTopicFilter.setTopicFilterSet(editTopicFilterSet);
+
+            EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
+                    new TransferData(RaftCommand.ADD_TOPIC_FILTER, JsonUtil.obj2String(addTopicFilter))));
+        }
+
+        MqttUtil.sendSubAck(channelHandlerContext, subMessageId, qoses);
     }
 
     public void unSubscribe(String clientId, List<TopicVo> topicVoList) {
