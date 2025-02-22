@@ -1,7 +1,7 @@
 package com.ep.mqtt.server.job;
 
 import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
-import com.ep.mqtt.server.db.dao.AsyncJobBaseDao;
+import com.ep.mqtt.server.db.dao.AsyncJobDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +37,7 @@ public class AsyncJobEngine {
         new ScheduledThreadPoolExecutor(Constant.PROCESSOR_NUM, new ThreadFactoryBuilder().setNameFormat("async-job-query-%s").build());
 
     @Resource
-    private AsyncJobBaseDao asyncJobDao;
+    private AsyncJobDao asyncJobDao;
 
     @Resource
     private TransactionUtil transactionUtil;

@@ -14,7 +14,7 @@ import java.util.List;
  * @author zbz
  * @date 2025/2/21 14:46
  */
-public interface AsyncJobBaseDao extends BaseMapper<AsyncJobDto> {
+public interface AsyncJobDao extends BaseMapper<AsyncJobDto> {
 
     /**
      * 获取待执行的任务
