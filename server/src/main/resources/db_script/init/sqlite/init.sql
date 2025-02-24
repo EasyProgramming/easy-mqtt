@@ -97,9 +97,7 @@ CREATE TABLE "send_message"
     "send_packet_id"     text    NOT NULL,
     "to_client_id"       text    NOT NULL,
     "payload"            text    NOT NULL,
-    "is_receive_puback"  text    NOT NULL,
-    "is_receive_pubrec"  text    NOT NULL,
-    "is_receive_pubcomp" text    NOT NULL,
+    "is_receive_pub_rec" text    NOT NULL,
     "valid_time"         integer NOT NULL,
     PRIMARY KEY ("id")
 );

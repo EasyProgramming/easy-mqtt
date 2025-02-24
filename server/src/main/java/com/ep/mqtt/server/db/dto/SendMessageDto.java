@@ -33,11 +33,7 @@ public class SendMessageDto {
 
     private String payload;
 
-    private YesOrNo isReceivePuback;
-
-    private YesOrNo isReceivePubrec;
-
-    private YesOrNo isReceivePubcomp;
+    private YesOrNo isReceivePubRec;
 
     private Long validTime;
 
