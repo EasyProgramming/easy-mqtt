@@ -1,9 +1,9 @@
 package com.ep.mqtt.server.session;
 
-import java.util.Map;
-
 import com.ep.mqtt.server.util.NettyUtil;
 import com.google.common.collect.Maps;
+
+import java.util.Map;
 
 /**
  * @author zbz
@@ -19,10 +19,6 @@ public class SessionManager {
     }
 
     public static void unbind(String clientId) {
-        Session session = get(clientId);
-        if (session != null) {
-            NettyUtil.setClientId(session.getChannelHandlerContext(), null);
-        }
         SESSION_MAP.remove(clientId);
     }
 

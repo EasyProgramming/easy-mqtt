@@ -1,35 +1,18 @@
 package com.ep.mqtt.server.deal;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-import javax.annotation.Resource;
-
-import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
-import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
-import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
-import com.google.common.collect.Sets;
-import io.netty.handler.codec.mqtt.*;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
 import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.ClientDto;
+import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.db.dto.ReceiveQos2MessageDto;
 import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.job.DispatchMessageParam;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
+import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.TopicFilterStore;
@@ -38,11 +21,25 @@ import com.ep.mqtt.server.util.*;
 import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
 import com.google.common.collect.Lists;
-
+import com.google.common.collect.Sets;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.mqtt.MqttConnectMessage;
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 请求broker
@@ -96,7 +93,6 @@ public class DefaultDeal {
     public void clearClientData(String clientId) {
         clientDao.deleteByClientId(clientId);
         clientSubscribeDao.deleteByClientId(clientId);
-        // TODO: 2025/1/5 在关于消息的异步任务中，如果发现消息不存在，则视为执行成功
         receiveQos2MessageDao.deleteByFromClientId(clientId);
         sendMessageDao.deleteByToClientId(clientId);
     }
@@ -385,6 +381,12 @@ public class DefaultDeal {
         }
 
         MqttUtil.sendPubComp(channelHandlerContext, receivePacketId);
+    }
+
+    public void disConnect(ChannelHandlerContext channelHandlerContext){
+        NettyUtil.setCleanDataReason(channelHandlerContext, "disConnect");
+
+        channelHandlerContext.close();
     }
 
     private void saveClientInfo(String clientId, boolean isCleanSession) {

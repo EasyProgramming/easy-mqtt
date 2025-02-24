@@ -1,16 +1,10 @@
 package com.ep.mqtt.server.handler;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
-
 import com.ep.mqtt.server.deal.DefaultDeal;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
+import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.util.NettyUtil;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -18,6 +12,11 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author zbz
@@ -49,6 +48,8 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("client session id: [{}], client id: [{}] occurred error", NettyUtil.getSessionId(ctx),
             NettyUtil.getClientId(ctx), cause);
+
+        NettyUtil.setCleanDataReason(ctx, "occur exception");
         ctx.close();
     }
 
@@ -57,6 +58,8 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         if (evt instanceof IdleStateEvent) {
             IdleStateEvent idleStateEvent = (IdleStateEvent)evt;
             if (idleStateEvent.state() == IdleState.ALL_IDLE) {
+                NettyUtil.setCleanDataReason(ctx, "ping timeout");
+
                 ctx.close();
             }
         } else {
@@ -73,15 +76,25 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
      */
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        log.info("client session id: [{}], client id: [{}] inactive", NettyUtil.getSessionId(ctx),
-            NettyUtil.getClientId(ctx));
+        String sessionId = NettyUtil.getSessionId(ctx);
         String clientId = NettyUtil.getClientId(ctx);
 
+        log.info("client session id: [{}], client id: [{}] inactive", sessionId, clientId);
         if (StringUtils.isBlank(clientId)) {
             return;
         }
 
+        Session session = SessionManager.get(clientId);
+
         SessionManager.unbind(clientId);
+        String cleanDataReason = NettyUtil.getCleanDataReason(ctx);
+        if (StringUtils.isNotBlank(cleanDataReason)){
+            log.info("client session id: [{}], client id: [{}], clear data reason[{}]", sessionId, clientId, cleanDataReason);
+
+            if (session!= null && session.getIsCleanSession()){
+                defaultDeal.clearClientData(clientId);
+            }
+        }
 
         // TODO: 2025/1/1 获取这个客户端的遗嘱消息，并发送
     }
