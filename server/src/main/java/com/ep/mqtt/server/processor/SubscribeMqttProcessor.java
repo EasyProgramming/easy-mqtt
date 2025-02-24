@@ -1,19 +1,12 @@
 package com.ep.mqtt.server.processor;
 
-import java.util.List;
-
-import org.springframework.stereotype.Component;
-
 import com.ep.mqtt.server.util.NettyUtil;
-import com.ep.mqtt.server.util.WorkerThreadPool;
-import com.ep.mqtt.server.vo.TopicVo;
-import com.google.common.collect.Lists;
-
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.*;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 订阅
