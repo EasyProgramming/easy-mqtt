@@ -3,13 +3,11 @@ package com.ep.mqtt.server.db.dao.sqlite;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ep.mqtt.server.db.dao.AsyncJobDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
-import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @author zbz
  * @date 2024/12/30 17:37
  */
-@Mapper
 public interface AsyncJobSqliteDao extends AsyncJobDao {
 
     /**
