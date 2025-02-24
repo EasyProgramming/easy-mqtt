@@ -9,7 +9,7 @@ import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
 import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
 import com.google.common.collect.Sets;
-import io.netty.handler.codec.mqtt.MqttTopicSubscription;
+import io.netty.handler.codec.mqtt.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.RedisCallback;
@@ -40,8 +40,6 @@ import com.ep.mqtt.server.vo.TopicVo;
 import com.google.common.collect.Lists;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttConnectMessage;
-import io.netty.handler.codec.mqtt.MqttQoS;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
@@ -168,18 +166,11 @@ public class DefaultDeal {
         MqttUtil.sendSubAck(channelHandlerContext, subMessageId, qoses);
     }
 
-    public void unSubscribe(String clientId, List<TopicVo> topicVoList) {
-        for (TopicVo topicVo : topicVoList) {
-            TopicUtil.validateTopicFilter(topicVo.getTopicFilter());
-        }
+    @Transactional(rollbackFor = Exception.class)
+    public void unSubscribe(ChannelHandlerContext channelHandlerContext, int unSubMessageId, String clientId, Set<String> topicFilterSet) {
+        clientSubscribeDao.deleteClientSubscribe(clientId, topicFilterSet);
 
-        stringRedisTemplate.execute((RedisCallback<Void>)connection -> {
-            for (TopicVo topicVo : topicVoList) {
-                connection.hDel((StoreKey.CLIENT_TOPIC_FILTER_KEY.formatKey(clientId)).getBytes(), topicVo.getTopicFilter().getBytes());
-                connection.hDel((StoreKey.TOPIC_FILTER_KEY.formatKey(topicVo.getTopicFilter())).getBytes(), clientId.getBytes());
-            }
-            return null;
-        });
+        MqttUtil.sendUnSubAck(channelHandlerContext, unSubMessageId);
     }
 
     public void sendMessage(MessageVo messageVo) {

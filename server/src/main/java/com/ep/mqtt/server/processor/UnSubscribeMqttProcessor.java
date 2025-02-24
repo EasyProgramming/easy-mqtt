@@ -1,16 +1,13 @@
 package com.ep.mqtt.server.processor;
 
-import java.util.List;
-
-import org.springframework.stereotype.Component;
-
 import com.ep.mqtt.server.util.NettyUtil;
-import com.ep.mqtt.server.vo.TopicVo;
-import com.google.common.collect.Lists;
-
+import com.google.common.collect.Sets;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.*;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 取消订阅
@@ -24,18 +21,8 @@ public class UnSubscribeMqttProcessor extends AbstractMqttProcessor<MqttUnsubscr
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttUnsubscribeMessage mqttMessage) {
-        String clientId = NettyUtil.getClientId(channelHandlerContext);
-        List<TopicVo> topicVoList = Lists.newArrayList();
-        for (String topicFilter : mqttMessage.payload().topics()) {
-            TopicVo topicVo = new TopicVo();
-            topicVo.setTopicFilter(topicFilter);
-            topicVoList.add(topicVo);
-        }
-        defaultDeal.unSubscribe(clientId, topicVoList);
-        // 发送取消订阅确认消息
-        int subMessageId = mqttMessage.variableHeader().messageId();
-        MqttUnsubAckMessage unsubAckMessage = MqttMessageBuilders.unsubAck().packetId(subMessageId).build();
-        channelHandlerContext.writeAndFlush(unsubAckMessage);
+        defaultDeal.unSubscribe(channelHandlerContext, mqttMessage.variableHeader().messageId(), NettyUtil.getClientId(channelHandlerContext),
+                Sets.newHashSet(mqttMessage.payload().topics()));
     }
 
     @Override

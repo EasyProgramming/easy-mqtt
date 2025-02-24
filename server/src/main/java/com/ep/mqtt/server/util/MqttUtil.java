@@ -54,4 +54,8 @@ public class MqttUtil {
         channelHandlerContext.writeAndFlush(mqttSubAckMessage);
     }
 
+    public static void sendUnSubAck(ChannelHandlerContext channelHandlerContext, int unSubMessageId) {
+        MqttUnsubAckMessage unsubAckMessage = MqttMessageBuilders.unsubAck().packetId(unSubMessageId).build();
+        channelHandlerContext.writeAndFlush(unsubAckMessage);
+    }
 }

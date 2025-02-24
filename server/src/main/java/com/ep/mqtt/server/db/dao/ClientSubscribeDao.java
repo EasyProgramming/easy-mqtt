@@ -32,8 +32,18 @@ public interface ClientSubscribeDao extends BaseMapper<ClientSubscribeDto> {
      * @param topicFilterSet 指定的topicFilter
      * @return 客户端的订阅关系
      */
-    default List<ClientSubscribeDto> getClientSubscribe(String clientId, Set<String> topicFilterSet){
+    default List<ClientSubscribeDto> getClientSubscribe(String clientId, Set<String> topicFilterSet) {
         return selectList(Wrappers.lambdaQuery(ClientSubscribeDto.class).eq(ClientSubscribeDto::getClientId, clientId)
                 .in(ClientSubscribeDto::getTopicFilter, topicFilterSet));
+    }
+
+    /**
+     * 删除客户端订阅关系
+     * @param clientId 客户端id
+     * @param topicFilterSet 指定的topicFilter
+     */
+    default void deleteClientSubscribe(String clientId, Set<String> topicFilterSet) {
+        delete(Wrappers.lambdaQuery(ClientSubscribeDto.class).eq(ClientSubscribeDto::getClientId, clientId).in(ClientSubscribeDto::getTopicFilter,
+                topicFilterSet));
     }
 }
