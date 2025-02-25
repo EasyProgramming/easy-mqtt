@@ -1,21 +1,16 @@
 package com.ep.mqtt.server.store;
 
+import com.ep.mqtt.server.util.JsonUtil;
+import io.vertx.core.impl.ConcurrentHashSet;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
-
-import com.ep.mqtt.server.util.RedisTemplateUtil;
-import com.ep.mqtt.server.util.TopicUtil;
-
-import io.vertx.core.impl.ConcurrentHashSet;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author zbz
@@ -25,30 +20,30 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class TopicFilterStore {
 
+    private static final String LOCK_KEY = "TopicFilterStore";
+
     private static final ConcurrentHashSet<String> TOPIC_FILTER_SET = new ConcurrentHashSet<>();
 
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+    private static final TopicFilterTree TOPIC_FILTER_TREE = new TopicFilterTree();
 
-    public Map<String, Integer> searchSubscribe(String topicName) {
-        // 排除重复订阅，例如： /test/# 和 /# 只发一份
-        Map<String, Integer> subscribeMap = new HashMap<>(32);
-        for (String topicFilter : TOPIC_FILTER_SET) {
-            if (!TopicUtil.match(topicFilter, topicName)) {
-                continue;
-            }
-            RedisTemplateUtil.hScan(stringRedisTemplate, topicFilter, "*", 5000,
-                entry -> subscribeMap.merge(entry.getKey(), Integer.valueOf(entry.getValue()), Math::max));
+    public List<String> matchTopicFilter(String topicName) {
+        synchronized (LOCK_KEY){
+            return TOPIC_FILTER_TREE.getMatchingFilters(topicName);
         }
-        return subscribeMap;
     }
 
     public static void add(String topicFilter) {
-        TOPIC_FILTER_SET.add(topicFilter);
+        synchronized (LOCK_KEY){
+            TOPIC_FILTER_TREE.insert(topicFilter);
+            TOPIC_FILTER_SET.add(topicFilter);
+        }
     }
 
     public static void remove(String topicFilter) {
-        TOPIC_FILTER_SET.remove(topicFilter);
+        synchronized (LOCK_KEY){
+            TOPIC_FILTER_TREE.delete(topicFilter);
+            TOPIC_FILTER_SET.remove(topicFilter);
+        }
     }
 
     public static ConcurrentHashSet<String> getTopicFilterSet() {
@@ -151,10 +146,9 @@ public class TopicFilterStore {
         /**
          * 删除一个 Topic Filter
          * @param filter 要删除的过滤器字符串
-         * @return 如果删除成功返回 true；否则返回 false
          */
-        public boolean delete(String filter) {
-            return deleteRecursive(root,  StringUtils.splitByWholeSeparatorPreserveAllTokens(filter, "/"), 0); // 从根节点开始递归删除
+        public void delete(String filter) {
+            deleteRecursive(root,  StringUtils.splitByWholeSeparatorPreserveAllTokens(filter, "/"), 0); // 从根节点开始递归删除
         }
 
         /**
@@ -235,6 +229,8 @@ public class TopicFilterStore {
             trie.insert("//#");
             trie.insert("///#");
 
+            System.out.println(JsonUtil.obj2String(trie.root));
+
             // 测试匹配逻辑
             System.out.println(trie.getMatchingFilters("device/"));         // [device/, device/#]
             System.out.println(trie.getMatchingFilters("device"));          // [device/#]
@@ -243,6 +239,9 @@ public class TopicFilterStore {
             System.out.println(trie.getMatchingFilters("sensor/1"));        // [sensor/#]
             System.out.println(trie.getMatchingFilters("sensor/"));         // [sensor/#]
             System.out.println(trie.getMatchingFilters("/"));         // [/, /#, //#]
+
+            trie.delete("/");
+            System.out.println(JsonUtil.obj2String(trie.root));
         }
 
     }

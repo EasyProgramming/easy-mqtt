@@ -1,17 +1,16 @@
 package com.ep.mqtt.server.job;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Component;
-
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
 import com.ep.mqtt.server.metadata.Constant;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author : zbz
@@ -29,7 +28,7 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
     public AsyncJobExecuteResult process(AsyncJobDto asyncJobDto, DispatchMessageParam jobParam) {
         // 匹配topic filter
 
-        // 根据topic filter及id游标查询匹配的客户端
+        // 根据topic filter及id游标查询匹配的客户端，并计算qos
 
         // 批量插入发送消息表
 

@@ -172,7 +172,7 @@ public class DefaultDeal {
     public void sendMessage(MessageVo messageVo) {
         long startTime = System.currentTimeMillis();
         // 先根据topic做匹配
-        Map<String, Integer> matchMap = topicFilterStore.searchSubscribe(messageVo.getTopic());
+        Map<String, Integer> matchMap = null;
         List<MessageVo> batchSendMessageVoList = new ArrayList<>();
         ArrayList<Map.Entry<String, Integer>> matchClientList = Lists.newArrayList(matchMap.entrySet());
         for (int i = 0; i < matchClientList.size(); i++) {
