@@ -15,7 +15,6 @@ import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.store.TopicStore;
 import com.ep.mqtt.server.util.*;
 import com.ep.mqtt.server.vo.MessageVo;
 import com.ep.mqtt.server.vo.TopicVo;
@@ -55,9 +54,6 @@ public class DefaultDeal {
 
     @Resource
     private MqttServerProperties mqttServerProperties;
-
-    @Resource
-    private TopicStore topicStore;
 
     @Resource
     private ClientDao clientDao;
@@ -222,7 +218,7 @@ public class DefaultDeal {
     public void sendTopicRetainMessage(String clientId, List<TopicVo> successSubscribeTopicList) {
         ChannelHandlerContext channelHandlerContext = SessionManager.get(clientId).getChannelHandlerContext();
         for (TopicVo topicVo : successSubscribeTopicList) {
-            List<MessageVo> messageVoList = topicStore.getRetainMessage(topicVo.getTopicFilter());
+            List<MessageVo> messageVoList = null;
             for (MessageVo messageVo : messageVoList) {
                 messageVo.setToClientId(clientId);
                 Integer messageId = genMessageId(clientId);

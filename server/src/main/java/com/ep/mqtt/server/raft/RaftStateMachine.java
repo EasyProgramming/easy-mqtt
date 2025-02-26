@@ -1,15 +1,14 @@
 package com.ep.mqtt.server.raft;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-
+import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
+import com.ep.mqtt.server.raft.transfer.TransferData;
+import com.ep.mqtt.server.session.Session;
+import com.ep.mqtt.server.session.SessionManager;
+import com.ep.mqtt.server.store.TopicFilterStore;
+import com.ep.mqtt.server.util.JsonUtil;
+import com.google.common.collect.Sets;
+import io.vertx.core.impl.ConcurrentHashSet;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ratis.io.MD5Hash;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
@@ -25,17 +24,15 @@ import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.util.MD5FileUtil;
 import org.apache.ratis.util.TimeDuration;
 
-import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
-import com.ep.mqtt.server.raft.transfer.TransferData;
-import com.ep.mqtt.server.session.Session;
-import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.store.TopicFilterStore;
-import com.ep.mqtt.server.store.TopicStore;
-import com.ep.mqtt.server.util.JsonUtil;
-import com.google.common.collect.Sets;
-
-import io.vertx.core.impl.ConcurrentHashSet;
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author zbz
@@ -191,26 +188,15 @@ public class RaftStateMachine extends BaseStateMachine {
 
         // read the counter value from the snapshot file
         final Set<String> topicFilterSet = Sets.newHashSet();
-        final Set<String> topicSet = Sets.newHashSet();
-        boolean isTopic = false;
         try (BufferedReader in = Files.newBufferedReader(snapshotPath)) {
             String line;
             while ((line = in.readLine()) != null) {
-                if (line.equals(SPLIT_FLAG)) {
-                    isTopic = true;
-                    continue;
-                }
-
-                if (isTopic) {
-                    topicSet.add(line);
-                } else {
-                    topicFilterSet.add(line);
-                }
+                topicFilterSet.add(line);
             }
         }
 
         // update state
-        updateState(last, topicFilterSet, topicSet);
+        updateState(last, topicFilterSet);
     }
 
     @Override
@@ -229,11 +215,12 @@ public class RaftStateMachine extends BaseStateMachine {
         return new State(getLastAppliedTermIndex(), TopicFilterStore.getTopicFilterSet());
     }
 
-    private synchronized void updateState(TermIndex applied, Set<String> topicFilterSet, Set<String> topicSet) {
+    private synchronized void updateState(TermIndex applied, Set<String> topicFilterSet) {
         updateLastAppliedTermIndex(applied);
 
         // 初始化数据
-        TopicStore.getTopicSet().addAll(topicSet);
-        TopicFilterStore.getTopicFilterSet().addAll(topicFilterSet);
+        for (String topicFilter : topicFilterSet){
+            TopicFilterStore.add(topicFilter);
+        }
     }
 }
