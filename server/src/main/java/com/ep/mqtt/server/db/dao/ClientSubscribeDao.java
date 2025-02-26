@@ -43,4 +43,16 @@ public interface ClientSubscribeDao extends BaseMapper<ClientSubscribeDto> {
         delete(Wrappers.lambdaQuery(ClientSubscribeDto.class).eq(ClientSubscribeDto::getClientId, clientId).in(ClientSubscribeDto::getTopicFilter,
                 topicFilterSet));
     }
+
+    /**
+     * 通过游标查询指定topic filter下的客户端
+     * @param topicFilterSet 指定topic filter
+     * @param cursor 游标
+     * @param pageSize 页大小
+     * @return 指定topic filter下的客户端
+     */
+    default List<ClientSubscribeDto> selectByCursor(Set<String> topicFilterSet, Long cursor, Integer pageSize){
+        return selectList(Wrappers.lambdaQuery(ClientSubscribeDto.class).in(ClientSubscribeDto::getTopicFilter, topicFilterSet).le(ClientSubscribeDto::getId,
+                cursor).orderByAsc(ClientSubscribeDto::getId).last(" limit " + pageSize));
+    }
 }

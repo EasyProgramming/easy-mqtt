@@ -13,6 +13,10 @@ public enum AsyncJobBusinessType implements BaseEnum<String> {
      */
     DISPATCH_MESSAGE("DISPATCH_MESSAGE", "分发消息", "DISPATCH_MESSAGE_%s"),
 
+    /**
+     * 生成messageId
+     */
+    GEN_MESSAGE_ID("GEN_MESSAGE_ID", "生成messageId", "GEN_MESSAGE_ID_%s"),
     ;
 
     private final String code;

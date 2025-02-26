@@ -15,7 +15,6 @@ import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.store.TopicStore;
 import com.ep.mqtt.server.util.*;
 import com.ep.mqtt.server.vo.MessageVo;
@@ -53,9 +52,6 @@ public class DefaultDeal {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
-
-    @Resource
-    private TopicFilterStore topicFilterStore;
 
     @Resource
     private MqttServerProperties mqttServerProperties;

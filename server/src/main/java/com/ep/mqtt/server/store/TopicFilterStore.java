@@ -5,7 +5,6 @@ import io.vertx.core.impl.ConcurrentHashSet;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +16,6 @@ import java.util.Map;
  * @date 2023/8/17 15:31
  */
 @Slf4j
-@Component
 public class TopicFilterStore {
 
     private static final String LOCK_KEY = "TopicFilterStore";
@@ -26,7 +24,7 @@ public class TopicFilterStore {
 
     private static final TopicFilterTree TOPIC_FILTER_TREE = new TopicFilterTree();
 
-    public List<String> matchTopicFilter(String topicName) {
+    public static List<String> matchTopicFilter(String topicName) {
         synchronized (LOCK_KEY){
             return TOPIC_FILTER_TREE.getMatchingFilters(topicName);
         }

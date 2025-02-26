@@ -1,19 +1,17 @@
 package com.ep.mqtt.server.job;
 
-import java.util.Date;
-
-import javax.annotation.Resource;
-
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.stereotype.Service;
-
 import com.ep.mqtt.server.db.dao.sqlite.AsyncJobSqliteDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
 import com.ep.mqtt.server.util.JsonUtil;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author : zbz
@@ -55,6 +53,14 @@ public class AsyncJobManage {
             log.warn("任务[{}]已存在", businessId);
         }
 
+    }
+
+    /**
+     * 新增异步任务
+     * @param asyncJobDtoList 异步任务列表
+     */
+    public void addJob(List<AsyncJobDto> asyncJobDtoList) {
+        asyncJobDao.insert(asyncJobDtoList);
     }
 
 }

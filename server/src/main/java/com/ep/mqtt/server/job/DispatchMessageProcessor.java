@@ -1,13 +1,24 @@
 package com.ep.mqtt.server.job;
 
+import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
+import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
-import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
-import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
-import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
+import com.ep.mqtt.server.db.dto.SendMessageDto;
+import com.ep.mqtt.server.metadata.*;
+import com.ep.mqtt.server.store.TopicFilterStore;
+import com.ep.mqtt.server.util.JsonUtil;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
+import javax.annotation.Resource;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +30,15 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessageParam> {
 
+    @Resource
+    private ClientSubscribeDao subscribeDao;
+
+    @Resource
+    private SendMessageDao sendMessageDao;
+
+    @Resource
+    private AsyncJobManage asyncJobManage;
+
     public DispatchMessageProcessor() {
         super(new ThreadPoolExecutor(Constant.PROCESSOR_NUM * 2, Constant.PROCESSOR_NUM * 2, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("dispatch-message-%s").build()));
@@ -27,14 +47,79 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
     @Override
     public AsyncJobExecuteResult process(AsyncJobDto asyncJobDto, DispatchMessageParam jobParam) {
         // 匹配topic filter
+        List<String> matchTopicFilterList = TopicFilterStore.matchTopicFilter(jobParam.getTopic());
+        if (CollectionUtils.isEmpty(matchTopicFilterList)){
+            return AsyncJobExecuteResult.SUCCESS;
+        }
 
         // 根据topic filter及id游标查询匹配的客户端，并计算qos
+        Map<String, Qos> clientQosMap = Maps.newHashMap();
+        List<ClientSubscribeDto> clientSubscribePage;
+        Long cursor = 0L;
+        int pageSize = 50000;
+        do {
+            clientSubscribePage = subscribeDao.selectByCursor(Sets.newHashSet(matchTopicFilterList), cursor, pageSize);
+            cursor = clientSubscribePage.get(clientSubscribePage.size() - 1).getId();
 
-        // 批量插入发送消息表
+            for (ClientSubscribeDto clientSubscribe : clientSubscribePage){
+                Qos existQos = clientQosMap.get(clientSubscribe.getClientId());
+                if (existQos == null){
+                    clientQosMap.put(clientSubscribe.getClientId(), clientSubscribe.getQos());
 
-        // 批量插入生成消息id的异步任务表
+                    continue;
+                }
 
-        return null;
+                if (existQos.getCode() >= clientSubscribe.getQos().getCode()){
+                    continue;
+                }
+
+                clientQosMap.put(clientSubscribe.getClientId(), clientSubscribe.getQos());
+            }
+        }while (clientSubscribePage.size() >= pageSize);
+
+        if (CollectionUtils.isEmpty(clientQosMap)){
+            return AsyncJobExecuteResult.SUCCESS;
+        }
+
+        Long validTime = System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7;
+        List<SendMessageDto> sendMessageDtoList = Lists.newArrayList();
+        for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
+            SendMessageDto sendMessageDto = new SendMessageDto();
+            sendMessageDto.setReceiveQos(jobParam.getReceiveQos());
+            sendMessageDto.setReceivePacketId(String.valueOf(jobParam.getReceivePacketId()));
+            sendMessageDto.setFromClientId(jobParam.getFromClientId());
+            sendMessageDto.setSendQos(clientQosEntry.getValue().getCode() >= jobParam.getReceiveQos().getCode() ? jobParam.getReceiveQos() :
+                    clientQosEntry.getValue());
+            sendMessageDto.setTopic(jobParam.getTopic());
+            sendMessageDto.setToClientId(clientQosEntry.getKey());
+            sendMessageDto.setPayload(jobParam.getPayload());
+            sendMessageDto.setIsReceivePubRec(YesOrNo.NO);
+            sendMessageDto.setValidTime(validTime);
+
+            sendMessageDtoList.add(sendMessageDto);
+        }
+        sendMessageDao.insert(sendMessageDtoList, 10000);
+
+        Long now = System.currentTimeMillis();
+        List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
+        for (SendMessageDto sendMessageDto : sendMessageDtoList){
+            AsyncJobDto genMessageIdAsyncJobDto = new AsyncJobDto();
+            genMessageIdAsyncJobDto.setBusinessId(AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(sendMessageDto.getId()));
+            genMessageIdAsyncJobDto.setBusinessType(AsyncJobBusinessType.GEN_MESSAGE_ID);
+
+            GenMessageIdParam genMessageIdParam = new GenMessageIdParam();
+            genMessageIdParam.setSendMessageId(sendMessageDto.getId());
+            genMessageIdAsyncJobDto.setJobParam(JsonUtil.obj2String(genMessageIdParam));
+
+            genMessageIdAsyncJobDto.setExpectExecuteTime(now);
+            genMessageIdAsyncJobDto.setExecuteNum(0);
+            genMessageIdAsyncJobDto.setExecuteStatus(AsyncJobStatus.READY);
+
+            genMessageIdAsyncJobDtoList.add(genMessageIdAsyncJobDto);
+        }
+        asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
+
+        return AsyncJobExecuteResult.SUCCESS;
     }
 
     @NonNull
