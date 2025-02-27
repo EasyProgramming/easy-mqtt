@@ -109,6 +109,10 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
 
             GenMessageIdParam genMessageIdParam = new GenMessageIdParam();
             genMessageIdParam.setSendMessageId(sendMessageDto.getId());
+            genMessageIdParam.setSendQos(sendMessageDto.getSendQos());
+            genMessageIdParam.setTopic(sendMessageDto.getTopic());
+            genMessageIdParam.setToClientId(sendMessageDto.getToClientId());
+            genMessageIdParam.setPayload(sendMessageDto.getPayload());
             genMessageIdAsyncJobDto.setJobParam(JsonUtil.obj2String(genMessageIdParam));
 
             genMessageIdAsyncJobDto.setExpectExecuteTime(now);

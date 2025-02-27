@@ -18,4 +18,15 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
     default void deleteByToClientId(String toClientId) {
         delete(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId));
     }
+
+    /**
+     * 更新sendPacketId
+     * @param sendMessageId 记录id
+     * @param sendPacketId 消息id
+     * @return 是否更新成功
+     */
+    default boolean updateSendPacketId(Long sendMessageId, String sendPacketId){
+        return update(Wrappers.lambdaUpdate(SendMessageDto.class).set(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getId,
+                sendMessageId).isNull(SendMessageDto::getSendPacketId)) > 0;
+    }
 }

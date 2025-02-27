@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ep.mqtt.server.db.dao.sqlite.MessageIdProgressSqliteDao">
+
+    <update id="incr">
+        update message_id_progress
+        set progress = progress + 1;
+        <where>
+            client_id = #{clientId,jdbcType=VARCHAR}
+        </where>
+    </update>
+
 </mapper>
