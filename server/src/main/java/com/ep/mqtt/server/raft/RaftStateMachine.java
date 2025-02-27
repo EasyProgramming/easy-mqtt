@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.raft;
 
+import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
 import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
@@ -112,10 +113,19 @@ public class RaftStateMachine extends BaseStateMachine {
 
         switch (transferData.getCommand()) {
             case ADD_TOPIC_FILTER:
-                TopicFilterStore.add(transferData.getData());
+                AddTopicFilter addTopicFilter = JsonUtil.string2Obj(transferData.getData(), AddTopicFilter.class);
+                if (addTopicFilter == null){
+                    break;
+                }
+
+                for (String topicFilter : addTopicFilter.getTopicFilterSet()){
+                    TopicFilterStore.add(topicFilter);
+                }
+
                 break;
             case REMOVE_TOPIC_FILTER:
-                TopicFilterStore.remove(transferData.getData());
+                // TODO: 2025/2/27 待实现删除topic filter的逻辑
+                TopicFilterStore.remove(null);
                 break;
             case CLEAN_EXIST_SESSION:
                 CheckRepeatSession checkRepeatSession =
