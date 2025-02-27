@@ -29,4 +29,11 @@ public interface MessageIdProgressDao extends BaseMapper<MessageIdProgressDto> {
      */
     void incr(String clientId);
 
+    /**
+     * 根据客户端id删除
+     * @param clientId 客户端id
+     */
+    default void deleteByClientId(String clientId){
+        delete(Wrappers.lambdaUpdate(MessageIdProgressDto.class).eq(MessageIdProgressDto::getClientId, clientId));
+    }
 }

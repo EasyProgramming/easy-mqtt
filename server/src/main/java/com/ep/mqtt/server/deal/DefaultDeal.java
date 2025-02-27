@@ -1,12 +1,10 @@
 package com.ep.mqtt.server.deal;
 
 import com.ep.mqtt.server.config.MqttServerProperties;
-import com.ep.mqtt.server.db.dao.ClientDao;
-import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
-import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
-import com.ep.mqtt.server.db.dao.SendMessageDao;
+import com.ep.mqtt.server.db.dao.*;
 import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
+import com.ep.mqtt.server.db.dto.MessageIdProgressDto;
 import com.ep.mqtt.server.db.dto.ReceiveQos2MessageDto;
 import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.job.DispatchMessageParam;
@@ -70,6 +68,9 @@ public class DefaultDeal {
     @Resource
     private AsyncJobManage asyncJobManage;
 
+    @Resource
+    private MessageIdProgressDao messageIdProgressDao;
+
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
             return true;
@@ -87,6 +88,7 @@ public class DefaultDeal {
         clientSubscribeDao.deleteByClientId(clientId);
         receiveQos2MessageDao.deleteByFromClientId(clientId);
         sendMessageDao.deleteByToClientId(clientId);
+        messageIdProgressDao.deleteByClientId(clientId);
     }
 
     /**
@@ -391,6 +393,12 @@ public class DefaultDeal {
         clientDto.setLastConnectTime(now);
 
         clientDao.insert(clientDto);
+
+        MessageIdProgressDto messageIdProgressDto = new MessageIdProgressDto();
+        messageIdProgressDto.setClientId(clientId);
+        messageIdProgressDto.setProgress(0L);
+
+        messageIdProgressDao.insert(messageIdProgressDto);
     }
 
     @Data
