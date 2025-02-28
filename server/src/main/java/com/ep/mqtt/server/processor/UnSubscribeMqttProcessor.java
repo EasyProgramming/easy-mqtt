@@ -21,7 +21,7 @@ public class UnSubscribeMqttProcessor extends AbstractMqttProcessor<MqttUnsubscr
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttUnsubscribeMessage mqttMessage) {
-        defaultDeal.unSubscribe(channelHandlerContext, mqttMessage.variableHeader().messageId(), NettyUtil.getClientId(channelHandlerContext),
+        inboundDeal.unSubscribe(channelHandlerContext, mqttMessage.variableHeader().messageId(), NettyUtil.getClientId(channelHandlerContext),
                 Sets.newHashSet(mqttMessage.payload().topics()));
     }
 

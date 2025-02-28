@@ -5,7 +5,6 @@ import com.ep.mqtt.server.util.NettyUtil;
 import com.ep.mqtt.server.util.WorkerThreadPool;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageBuilders;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,8 +24,8 @@ public class PubRecMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
         Integer messageId = getMessageId(mqttMessage);
         String clientId = NettyUtil.getClientId(channelHandlerContext);
         WorkerThreadPool.dealMessage((a)-> {
-            defaultDeal.delMessage(clientId, messageId);
-            defaultDeal.saveRelMessage(clientId, messageId);
+            inboundDeal.delMessage(clientId, messageId);
+            inboundDeal.saveRelMessage(clientId, messageId);
         }, ()-> MqttUtil.sendPubRel(channelHandlerContext, messageId), channelHandlerContext);
     }
 

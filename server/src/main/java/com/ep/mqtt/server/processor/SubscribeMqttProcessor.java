@@ -20,7 +20,7 @@ public class SubscribeMqttProcessor extends AbstractMqttProcessor<MqttSubscribeM
 
     @Override
     public void process(ChannelHandlerContext channelHandlerContext, MqttSubscribeMessage mqttMessage) {
-        defaultDeal.subscribe(channelHandlerContext,mqttMessage.variableHeader().messageId(), NettyUtil.getClientId(channelHandlerContext),
+        inboundDeal.subscribe(channelHandlerContext,mqttMessage.variableHeader().messageId(), NettyUtil.getClientId(channelHandlerContext),
                 mqttMessage.payload().topicSubscriptions());
     }
 

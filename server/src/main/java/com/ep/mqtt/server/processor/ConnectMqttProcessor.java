@@ -1,8 +1,5 @@
 package com.ep.mqtt.server.processor;
 
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
-
 import com.ep.mqtt.server.metadata.RaftCommand;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
@@ -11,11 +8,12 @@ import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.NettyUtil;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
 
 /**
  * 建立连接
@@ -48,7 +46,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             }
 
             // 鉴权
-            if (!defaultDeal.authentication(mqttConnectMessage)) {
+            if (!inboundDeal.authentication(mqttConnectMessage)) {
                 // 认证失败，返回错误的ack消息
                 sendConnectAck(channelHandlerContext,
                     MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD, false, true);
@@ -60,7 +58,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
 
             boolean isCleanSession = mqttConnectMessage.variableHeader().isCleanSession();
 
-            defaultDeal.connect(clientIdentifier, isCleanSession);
+            inboundDeal.connect(clientIdentifier, isCleanSession);
 
             // 新建内存会话
             Session session = new Session();

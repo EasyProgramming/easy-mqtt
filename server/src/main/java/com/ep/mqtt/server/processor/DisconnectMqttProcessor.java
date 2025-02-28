@@ -1,13 +1,10 @@
 package com.ep.mqtt.server.processor;
 
-import com.ep.mqtt.server.deal.DefaultDeal;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.Resource;
 
 /**
  * 断开连接
@@ -19,12 +16,9 @@ import javax.annotation.Resource;
 @Component
 public class DisconnectMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
 
-    @Resource
-    private DefaultDeal defaultDeal;
-
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttMessage mqttMessage) {
-        defaultDeal.disConnect(channelHandlerContext);
+        inboundDeal.disConnect(channelHandlerContext);
     }
 
     @Override

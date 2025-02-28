@@ -1,14 +1,12 @@
 package com.ep.mqtt.server.processor;
 
-import org.springframework.beans.factory.annotation.Autowired;
-
-import com.ep.mqtt.server.deal.DefaultDeal;
-
+import com.ep.mqtt.server.deal.InboundDeal;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author zbz
@@ -18,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class AbstractMqttProcessor<T extends MqttMessage> {
 
     @Autowired
-    protected DefaultDeal defaultDeal;
+    protected InboundDeal inboundDeal;
 
     /**
      * 入口

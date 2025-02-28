@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class DefaultDeal {
+public class InboundDeal {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;

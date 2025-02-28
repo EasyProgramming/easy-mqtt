@@ -1,13 +1,11 @@
 package com.ep.mqtt.server.processor;
 
-import org.springframework.stereotype.Component;
-
 import com.ep.mqtt.server.util.NettyUtil;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 发布释放
@@ -21,7 +19,7 @@ public class PubRelMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttMessage mqttMessage) {
-        defaultDeal.pubRel(channelHandlerContext, getMessageId(mqttMessage), NettyUtil.getClientId(channelHandlerContext));
+        inboundDeal.pubRel(channelHandlerContext, getMessageId(mqttMessage), NettyUtil.getClientId(channelHandlerContext));
     }
 
     @Override

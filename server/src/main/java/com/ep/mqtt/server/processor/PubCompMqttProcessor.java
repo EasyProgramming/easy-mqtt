@@ -21,7 +21,7 @@ public class PubCompMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
         WorkerThreadPool.dealMessage((a)-> {
             Integer messageId = getMessageId(mqttMessage);
             String clientId = NettyUtil.getClientId(channelHandlerContext);
-            defaultDeal.delRelMessage(clientId, messageId);
+            inboundDeal.delRelMessage(clientId, messageId);
         }, null, channelHandlerContext);
     }
 

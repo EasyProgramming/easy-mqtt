@@ -141,6 +141,7 @@ public class RaftStateMachine extends BaseStateMachine {
                 break;
             case SEND_MESSAGE:
                 // TODO: 2025/1/5 待实现发送消息逻辑
+
                 break;
             default:
         }

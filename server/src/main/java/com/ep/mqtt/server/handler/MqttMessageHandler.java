@@ -1,6 +1,6 @@
 package com.ep.mqtt.server.handler;
 
-import com.ep.mqtt.server.deal.DefaultDeal;
+import com.ep.mqtt.server.deal.InboundDeal;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
@@ -25,14 +25,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage> {
 
-    private final DefaultDeal defaultDeal;
+    private final InboundDeal inboundDeal;
 
     private final Map<MqttMessageType, AbstractMqttProcessor<?>> abstractMqttProcessorMap;
 
-    public MqttMessageHandler(List<AbstractMqttProcessor<?>> abstractMqttProcessorList, DefaultDeal defaultDeal) {
+    public MqttMessageHandler(List<AbstractMqttProcessor<?>> abstractMqttProcessorList, InboundDeal inboundDeal) {
         abstractMqttProcessorMap = abstractMqttProcessorList.stream()
             .collect(Collectors.toMap(AbstractMqttProcessor::getMqttMessageType, b -> b));
-        this.defaultDeal = defaultDeal;
+        this.inboundDeal = inboundDeal;
     }
 
     @Override
@@ -92,7 +92,7 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
             log.info("client session id: [{}], client id: [{}], clear data reason[{}]", sessionId, clientId, cleanDataReason);
 
             if (session!= null && session.getIsCleanSession()){
-                defaultDeal.clearClientData(clientId);
+                inboundDeal.clearClientData(clientId);
             }
         }
 
