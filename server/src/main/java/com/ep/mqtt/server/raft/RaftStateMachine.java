@@ -2,11 +2,13 @@ package com.ep.mqtt.server.raft;
 
 import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
 import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
+import com.ep.mqtt.server.raft.transfer.SendMessage;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.util.MqttUtil;
 import com.google.common.collect.Sets;
 import io.vertx.core.impl.ConcurrentHashSet;
 import lombok.extern.slf4j.Slf4j;
@@ -123,13 +125,14 @@ public class RaftStateMachine extends BaseStateMachine {
                 }
 
                 break;
-            case REMOVE_TOPIC_FILTER:
+            case REMOVE_TOPIC_FILTER: {
                 // TODO: 2025/2/27 待实现删除topic filter的逻辑
                 TopicFilterStore.remove(null);
                 break;
-            case CLEAN_EXIST_SESSION:
+            }
+            case CLEAN_EXIST_SESSION: {
                 CheckRepeatSession checkRepeatSession =
-                    JsonUtil.string2Obj(transferData.getData(), CheckRepeatSession.class);
+                        JsonUtil.string2Obj(transferData.getData(), CheckRepeatSession.class);
                 if (checkRepeatSession == null) {
                     break;
                 }
@@ -139,10 +142,23 @@ public class RaftStateMachine extends BaseStateMachine {
                     session.getChannelHandlerContext().disconnect();
                 }
                 break;
-            case SEND_MESSAGE:
-                // TODO: 2025/1/5 待实现发送消息逻辑
+            }
+            case SEND_MESSAGE: {
+                SendMessage sendMessage =
+                        JsonUtil.string2Obj(transferData.getData(), SendMessage.class);
+                if (sendMessage == null) {
+                    break;
+                }
+
+                Session session = SessionManager.get(sendMessage.getToClientId());
+                if (session != null){
+                    MqttUtil.sendPublish(session.getChannelHandlerContext(), sendMessage.getIsDup(), sendMessage.getSendQos(), sendMessage.getIsRetain(),
+                            sendMessage.getTopic(),
+                            sendMessage.getSendPacketId(), sendMessage.getPayload());
+                }
 
                 break;
+            }
             default:
         }
     }

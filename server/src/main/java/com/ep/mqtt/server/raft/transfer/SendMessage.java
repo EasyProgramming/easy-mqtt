@@ -20,4 +20,7 @@ public class SendMessage {
 
     private String payload;
 
+    private Boolean isDup;
+
+    private Boolean isRetain;
 }

@@ -12,10 +12,7 @@ import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
 import com.ep.mqtt.server.raft.transfer.TransferData;
-import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.util.*;
-import com.ep.mqtt.server.vo.MessageVo;
-import com.ep.mqtt.server.vo.TopicVo;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,7 +35,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 请求broker
+ * 入站报文处理器
  * 
  * @author zbz
  * @date 2023/7/15 17:10
@@ -163,46 +160,6 @@ public class InboundDeal {
         MqttUtil.sendUnSubAck(channelHandlerContext, unSubMessageId);
     }
 
-    public void sendMessage(MessageVo messageVo) {
-        long startTime = System.currentTimeMillis();
-        // 先根据topic做匹配
-        Map<String, Integer> matchMap = null;
-        List<MessageVo> batchSendMessageVoList = new ArrayList<>();
-        ArrayList<Map.Entry<String, Integer>> matchClientList = Lists.newArrayList(matchMap.entrySet());
-        for (int i = 0; i < matchClientList.size(); i++) {
-            Map.Entry<String, Integer> entry = matchClientList.get(i);
-            Integer toQos = Math.min(messageVo.getFromQos(), entry.getValue());
-            messageVo.setToQos(toQos);
-            messageVo.setToClientId(entry.getKey());
-            Integer messageId = genMessageId(messageVo.getToClientId());
-            if (messageId != null) {
-                messageVo.setToMessageId(String.valueOf(messageId));
-                switch (MqttQoS.valueOf(messageVo.getToQos())) {
-                    case AT_MOST_ONCE:
-                        batchSendMessageVoList.add(messageVo);
-                        break;
-                    case AT_LEAST_ONCE:
-                    case EXACTLY_ONCE:
-                        String messageKey = StoreKey.MESSAGE_KEY.formatKey(messageVo.getToClientId());
-                        RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.SAVE_MESSAGE, Long.class);
-                        Long flag = stringRedisTemplate.execute(redisScript, Lists.newArrayList(messageKey), messageVo.getToMessageId(),
-                            JsonUtil.obj2String(messageVo));
-                        if (flag != null) {
-                            batchSendMessageVoList.add(messageVo);
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
-            if (batchSendMessageVoList.size() >= 100 || i == matchMap.entrySet().size() - 1) {
-                stringRedisTemplate.convertAndSend(ChannelKey.SEND_MESSAGE.getKey(), JsonUtil.obj2String(batchSendMessageVoList));
-                batchSendMessageVoList.clear();
-            }
-        }
-        log.info("complete send message, cost {}ms", System.currentTimeMillis() - startTime);
-    }
-
     private Integer genMessageId(String clientId) {
         String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(clientId);
         RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.GEN_MESSAGE_ID, Long.class);
@@ -215,52 +172,6 @@ public class InboundDeal {
 
     public void delMessage(String clientId, Integer messageId) {
         stringRedisTemplate.opsForHash().delete(StoreKey.MESSAGE_KEY.formatKey(clientId), String.valueOf(messageId));
-    }
-
-    public void sendTopicRetainMessage(String clientId, List<TopicVo> successSubscribeTopicList) {
-        ChannelHandlerContext channelHandlerContext = SessionManager.get(clientId).getChannelHandlerContext();
-        for (TopicVo topicVo : successSubscribeTopicList) {
-            List<MessageVo> messageVoList = null;
-            for (MessageVo messageVo : messageVoList) {
-                messageVo.setToClientId(clientId);
-                Integer messageId = genMessageId(clientId);
-                if (messageId == null) {
-                    continue;
-                }
-                messageVo.setToMessageId(String.valueOf(messageId));
-                switch (MqttQoS.valueOf(messageVo.getToQos())) {
-                    case AT_LEAST_ONCE:
-                    case EXACTLY_ONCE:
-                        stringRedisTemplate.opsForHash().put(StoreKey.MESSAGE_KEY.formatKey(messageVo.getToClientId()), messageVo.getToMessageId(),
-                            JsonUtil.obj2String(messageVo));
-                        break;
-                    default:
-                        break;
-                }
-                MqttUtil.sendPublish(channelHandlerContext, messageVo);
-            }
-        }
-
-    }
-
-    public void saveRecMessage(MessageVo messageVo) {
-        String recMessageKey = StoreKey.REC_MESSAGE_KEY.formatKey(messageVo.getFromClientId());
-        RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.SAVE_REC_MESSAGE);
-        stringRedisTemplate.execute(redisScript, Lists.newArrayList(recMessageKey), String.valueOf(messageVo.getFromMessageId()),
-            JsonUtil.obj2String(messageVo));
-    }
-
-    public void delRecMessage(String clientId, Integer messageId) {
-        stringRedisTemplate.opsForHash().delete(StoreKey.REC_MESSAGE_KEY.formatKey(clientId), String.valueOf(messageId));
-    }
-
-    public MessageVo getRecMessage(String clientId, Integer messageId) {
-        String hashKey = StoreKey.REC_MESSAGE_KEY.formatKey(clientId);
-        String messageVoStr = (String)stringRedisTemplate.opsForHash().get(hashKey, String.valueOf(messageId));
-        if (StringUtils.isBlank(messageVoStr)) {
-            return null;
-        }
-        return JsonUtil.string2Obj(messageVoStr, MessageVo.class);
     }
 
     public void saveRelMessage(String clientId, Integer messageId) {

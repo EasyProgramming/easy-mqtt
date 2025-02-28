@@ -99,6 +99,7 @@ CREATE TABLE "send_message"
     "payload"            text    NOT NULL,
     "is_receive_pub_rec" text    NOT NULL,
     "valid_time"         integer NOT NULL,
+    "is_retain"          text    NOT NULL,
     PRIMARY KEY ("id")
 );
 

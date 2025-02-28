@@ -8,12 +8,12 @@ public enum YesOrNo implements BaseEnum<String> {
     /**
      * 是
      */
-    YES("Y", "是", 1),
+    YES("Y", "是", 1, true),
 
     /**
      * 否
      */
-    NO("N", "否", 0),
+    NO("N", "否", 0, false),
     ;
 
     private final String code;
@@ -22,10 +22,13 @@ public enum YesOrNo implements BaseEnum<String> {
 
     private final Integer number;
 
-    YesOrNo(String code, String desc, Integer number){
+    private final Boolean xBoolean;
+
+    YesOrNo(String code, String desc, Integer number, Boolean xBoolean){
         this.code = code;
         this.desc = desc;
         this.number = number;
+        this.xBoolean = xBoolean;
     }
 
     @Override
@@ -42,6 +45,10 @@ public enum YesOrNo implements BaseEnum<String> {
         return number;
     }
 
+    public Boolean getBoolean() {
+        return xBoolean;
+    }
+
     public static YesOrNo valueOf(Boolean value) {
         if (value == null) {
             return null;
@@ -55,5 +62,4 @@ public enum YesOrNo implements BaseEnum<String> {
         }
         return YES.getNumber().equals(value);
     }
-
 }

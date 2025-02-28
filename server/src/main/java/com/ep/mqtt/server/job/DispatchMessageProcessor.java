@@ -95,6 +95,7 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
             sendMessageDto.setPayload(jobParam.getPayload());
             sendMessageDto.setIsReceivePubRec(YesOrNo.NO);
             sendMessageDto.setValidTime(validTime);
+            sendMessageDto.setIsRetain(YesOrNo.NO);
 
             sendMessageDtoList.add(sendMessageDto);
         }
@@ -113,6 +114,7 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
             genMessageIdParam.setTopic(sendMessageDto.getTopic());
             genMessageIdParam.setToClientId(sendMessageDto.getToClientId());
             genMessageIdParam.setPayload(sendMessageDto.getPayload());
+            genMessageIdParam.setIsRetain(sendMessageDto.getIsRetain());
             genMessageIdAsyncJobDto.setJobParam(JsonUtil.obj2String(genMessageIdParam));
 
             genMessageIdAsyncJobDto.setExpectExecuteTime(now);

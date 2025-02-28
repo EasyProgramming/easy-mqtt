@@ -1,6 +1,7 @@
 package com.ep.mqtt.server.job;
 
 import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.YesOrNo;
 import lombok.Data;
 
 /**
@@ -19,5 +20,7 @@ public class GenMessageIdParam {
     private String toClientId;
 
     private String payload;
+
+    private YesOrNo isRetain;
 
 }

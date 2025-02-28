@@ -52,6 +52,8 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
             sendMessage.setSendPacketId(String.valueOf(messageId));
             sendMessage.setToClientId(jobParam.getToClientId());
             sendMessage.setPayload(jobParam.getPayload());
+            sendMessage.setIsDup(false);
+            sendMessage.setIsRetain(jobParam.getIsRetain().getBoolean());
 
             EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
                     new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));

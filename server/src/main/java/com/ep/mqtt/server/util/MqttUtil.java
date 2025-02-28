@@ -1,7 +1,6 @@
 package com.ep.mqtt.server.util;
 
-import com.ep.mqtt.server.metadata.YesOrNo;
-import com.ep.mqtt.server.vo.MessageVo;
+import com.ep.mqtt.server.metadata.Qos;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -12,13 +11,14 @@ import io.netty.handler.codec.mqtt.*;
  */
 public class MqttUtil {
 
-    public static void sendPublish(ChannelHandlerContext channelHandlerContext, MessageVo messageVo) {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, messageVo.getIsDup(),
-            MqttQoS.valueOf(messageVo.getToQos()), YesOrNo.valueOf(messageVo.getIsRetained()), 0);
+    public static void sendPublish(ChannelHandlerContext channelHandlerContext, Boolean isDup, Qos qos, Boolean isRetain, String topic,
+                                   String messageId, String payload) {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup,
+            MqttQoS.valueOf(qos.getCode()), isRetain, 0);
         MqttPublishVariableHeader mqttVariableHeader =
-            new MqttPublishVariableHeader(messageVo.getTopic(), Integer.parseInt(messageVo.getToMessageId()));
+            new MqttPublishVariableHeader(topic, Integer.parseInt(messageId));
         MqttPublishMessage mqttPublishMessage = new MqttPublishMessage(mqttFixedHeader, mqttVariableHeader,
-            Unpooled.buffer().writeBytes(messageVo.getPayload().getBytes()));
+            Unpooled.buffer().writeBytes(payload.getBytes()));
         channelHandlerContext.writeAndFlush(mqttPublishMessage);
     }
 
