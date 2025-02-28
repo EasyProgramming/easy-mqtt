@@ -23,9 +23,6 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -43,9 +40,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class InboundDeal {
-
-    @Resource
-    private StringRedisTemplate stringRedisTemplate;
 
     @Resource
     private MqttServerProperties mqttServerProperties;
@@ -160,28 +154,13 @@ public class InboundDeal {
         MqttUtil.sendUnSubAck(channelHandlerContext, unSubMessageId);
     }
 
-    private Integer genMessageId(String clientId) {
-        String genMessageIdKey = StoreKey.GEN_MESSAGE_ID_KEY.formatKey(clientId);
-        RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.GEN_MESSAGE_ID, Long.class);
-        Long messageId = stringRedisTemplate.execute(redisScript, Lists.newArrayList(genMessageIdKey));
-        if (messageId != null) {
-            return Math.toIntExact(messageId % 65535 + 1);
-        }
-        return null;
-    }
-
     public void delMessage(String clientId, Integer messageId) {
-        stringRedisTemplate.opsForHash().delete(StoreKey.MESSAGE_KEY.formatKey(clientId), String.valueOf(messageId));
     }
 
     public void saveRelMessage(String clientId, Integer messageId) {
-        String relMessageKey = StoreKey.REL_MESSAGE_KEY.formatKey(clientId);
-        RedisScript<Long> redisScript = new DefaultRedisScript<>(LuaScript.SAVE_REL_MESSAGE);
-        stringRedisTemplate.execute(redisScript, Lists.newArrayList(relMessageKey), String.valueOf(messageId));
     }
 
     public void delRelMessage(String clientId, Integer messageId) {
-        stringRedisTemplate.opsForSet().remove(StoreKey.REL_MESSAGE_KEY.formatKey(clientId), String.valueOf(messageId));
     }
 
     @Transactional(rollbackFor = Exception.class)
