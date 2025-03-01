@@ -320,6 +320,11 @@ public class InboundDeal {
         channelHandlerContext.close();
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void pubComp(String clientId, Integer messageId) {
+        sendMessageDao.deleteExactlyOnceMessage(clientId, messageId);
+    }
+
     private void saveClientInfo(String clientId, boolean isCleanSession) {
         ClientDto clientDto = new ClientDto();
         clientDto.setClientId(clientId);

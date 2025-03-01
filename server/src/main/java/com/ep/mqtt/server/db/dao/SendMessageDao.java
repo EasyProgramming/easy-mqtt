@@ -71,4 +71,17 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
     default List<SendMessageDto> selectRetryMessage(String toClientId) {
         return selectList(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId));
     }
+
+    /**
+     * 删除qos=2的消息
+     *
+     * @param toClientId
+     *            客户端id
+     * @param sendPacketId
+     *            消息id
+     */
+    default void deleteExactlyOnceMessage(String toClientId, Integer sendPacketId) {
+        delete(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId)
+            .eq(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getSendQos, Qos.LEVEL_2));
+    }
 }

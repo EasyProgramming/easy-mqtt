@@ -1,12 +1,13 @@
 package com.ep.mqtt.server.processor;
 
+import org.springframework.stereotype.Component;
+
 import com.ep.mqtt.server.util.NettyUtil;
-import com.ep.mqtt.server.util.WorkerThreadPool;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 /**
  * @author zbz
@@ -18,11 +19,7 @@ public class PubCompMqttProcessor extends AbstractMqttProcessor<MqttMessage> {
 
     @Override
     protected void process(ChannelHandlerContext channelHandlerContext, MqttMessage mqttMessage) {
-        WorkerThreadPool.dealMessage((a)-> {
-            Integer messageId = getMessageId(mqttMessage);
-            String clientId = NettyUtil.getClientId(channelHandlerContext);
-            inboundDeal.delRelMessage(clientId, messageId);
-        }, null, channelHandlerContext);
+        inboundDeal.pubComp(NettyUtil.getClientId(channelHandlerContext), getMessageId(mqttMessage));
     }
 
     @Override
