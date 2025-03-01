@@ -1,24 +1,23 @@
 package com.ep.mqtt.server.job;
 
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
+
 import com.ep.mqtt.server.db.dao.MessageIdProgressDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
-import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
-import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
-import com.ep.mqtt.server.metadata.Constant;
-import com.ep.mqtt.server.metadata.RaftCommand;
+import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.SendMessage;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.Resource;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author zbz
@@ -45,18 +44,23 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
             return AsyncJobExecuteResult.SUCCESS;
         }
 
-        if (sendMessageDao.updateSendPacketId(jobParam.getSendMessageId(), String.valueOf(messageId))){
-            SendMessage sendMessage = new SendMessage();
-            sendMessage.setSendQos(jobParam.getSendQos());
-            sendMessage.setTopic(jobParam.getTopic());
-            sendMessage.setSendPacketId(String.valueOf(messageId));
-            sendMessage.setToClientId(jobParam.getToClientId());
-            sendMessage.setPayload(jobParam.getPayload());
-            sendMessage.setIsDup(false);
-            sendMessage.setIsRetain(jobParam.getIsRetain().getBoolean());
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setSendQos(jobParam.getSendQos());
+        sendMessage.setTopic(jobParam.getTopic());
+        sendMessage.setSendPacketId(String.valueOf(messageId));
+        sendMessage.setToClientId(jobParam.getToClientId());
+        sendMessage.setPayload(jobParam.getPayload());
+        sendMessage.setIsDup(false);
+        sendMessage.setIsRetain(jobParam.getIsRetain().getBoolean());
 
+        if (jobParam.getSendQos() == Qos.LEVEL_0) {
             EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
                     new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
+        }
+        else {
+            if (sendMessageDao.updateSendPacketId(jobParam.getSendMessageId(), String.valueOf(messageId))) {
+                EasyMqttRaftClient.syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
+            }
         }
 
         return AsyncJobExecuteResult.SUCCESS;
