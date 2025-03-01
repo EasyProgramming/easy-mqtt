@@ -1,5 +1,16 @@
 package com.ep.mqtt.server.deal;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.db.dao.*;
 import com.ep.mqtt.server.db.dto.ClientDto;
@@ -15,21 +26,13 @@ import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.util.*;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
-
-import javax.annotation.Resource;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 入站报文处理器
@@ -154,13 +157,16 @@ public class InboundDeal {
         MqttUtil.sendUnSubAck(channelHandlerContext, unSubMessageId);
     }
 
-    public void delMessage(String clientId, Integer messageId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void pubAck(String clientId, Integer messageId) {
+        sendMessageDao.deleteAtLeastOnceMessage(clientId, String.valueOf(messageId));
     }
 
-    public void saveRelMessage(String clientId, Integer messageId) {
-    }
+    @Transactional(rollbackFor = Exception.class)
+    public void pubRec(ChannelHandlerContext channelHandlerContext, String clientId, Integer messageId) {
+        sendMessageDao.updateReceivePubRec(clientId, String.valueOf(messageId));
 
-    public void delRelMessage(String clientId, Integer messageId) {
+        MqttUtil.sendPubRel(channelHandlerContext, messageId);
     }
 
     @Transactional(rollbackFor = Exception.class)
