@@ -90,11 +90,11 @@ CREATE TABLE "send_message"
 (
     "id"                 integer NOT NULL,
     "receive_qos"        integer NOT NULL,
-    "receive_packet_id"  text    NOT NULL,
+    "receive_packet_id"  integer NOT NULL,
     "from_client_id"     text    NOT NULL,
     "send_qos"           integer NOT NULL,
     "topic"              text    NOT NULL,
-    "send_packet_id"     text    NULL,
+    "send_packet_id"     integer NULL,
     "to_client_id"       text    NOT NULL,
     "payload"            text    NOT NULL,
     "is_receive_pub_rec" text    NOT NULL,

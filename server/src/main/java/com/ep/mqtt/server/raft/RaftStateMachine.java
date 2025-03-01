@@ -155,8 +155,7 @@ public class RaftStateMachine extends BaseStateMachine {
                 Session session = SessionManager.get(sendMessage.getToClientId());
                 if (session != null){
                     MqttUtil.sendPublish(session.getChannelHandlerContext(), sendMessage.getIsDup(), sendMessage.getSendQos(), sendMessage.getIsRetain(),
-                            sendMessage.getTopic(),
-                        Integer.parseInt(sendMessage.getSendPacketId()), sendMessage.getPayload());
+                        sendMessage.getTopic(), sendMessage.getSendPacketId(), sendMessage.getPayload());
                 }
 
                 break;

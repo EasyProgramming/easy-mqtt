@@ -104,14 +104,14 @@ public class InboundDeal {
                         if (selectRetryMessageDto.getSendQos() == Qos.LEVEL_1) {
                             MqttUtil.sendPublish(session.getChannelHandlerContext(), true, selectRetryMessageDto.getSendQos(),
                                 selectRetryMessageDto.getIsRetain().getBoolean(), selectRetryMessageDto.getTopic(),
-                                Integer.parseInt(selectRetryMessageDto.getSendPacketId()), selectRetryMessageDto.getPayload());
+                                selectRetryMessageDto.getSendPacketId(), selectRetryMessageDto.getPayload());
                         } else if (selectRetryMessageDto.getSendQos() == Qos.LEVEL_2) {
                             if (selectRetryMessageDto.getIsReceivePubRec().getBoolean()) {
-                                MqttUtil.sendPubRel(session.getChannelHandlerContext(), Integer.parseInt(selectRetryMessageDto.getSendPacketId()));
+                                MqttUtil.sendPubRel(session.getChannelHandlerContext(), selectRetryMessageDto.getSendPacketId());
                             } else {
                                 MqttUtil.sendPublish(session.getChannelHandlerContext(), true, selectRetryMessageDto.getSendQos(),
                                     selectRetryMessageDto.getIsRetain().getBoolean(), selectRetryMessageDto.getTopic(),
-                                    Integer.parseInt(selectRetryMessageDto.getSendPacketId()), selectRetryMessageDto.getPayload());
+                                    selectRetryMessageDto.getSendPacketId(), selectRetryMessageDto.getPayload());
                             }
                         } else {
                             log.warn("不应存在的数据,[{}]", JsonUtil.obj2String(selectRetryMessageDto));
@@ -209,12 +209,12 @@ public class InboundDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public void pubAck(String clientId, Integer messageId) {
-        sendMessageDao.deleteAtLeastOnceMessage(clientId, String.valueOf(messageId));
+        sendMessageDao.deleteAtLeastOnceMessage(clientId, messageId);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void pubRec(ChannelHandlerContext channelHandlerContext, String clientId, Integer messageId) {
-        sendMessageDao.updateReceivePubRec(clientId, String.valueOf(messageId));
+        sendMessageDao.updateReceivePubRec(clientId, messageId);
 
         MqttUtil.sendPubRel(channelHandlerContext, messageId);
     }

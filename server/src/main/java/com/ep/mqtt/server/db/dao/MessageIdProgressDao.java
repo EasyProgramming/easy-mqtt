@@ -15,12 +15,12 @@ public interface MessageIdProgressDao extends BaseMapper<MessageIdProgressDto> {
      * @param clientId 客户端id
      * @return 消息id
      */
-    default Long genMessageId(String clientId){
+    default Integer genMessageId(String clientId) {
         incr(clientId);
         MessageIdProgressDto messageIdProgressDto = selectOne(Wrappers.lambdaQuery(MessageIdProgressDto.class).eq(MessageIdProgressDto::getClientId
                 , clientId));
 
-        return messageIdProgressDto == null ? null : messageIdProgressDto.getProgress() % 65535L;
+        return messageIdProgressDto == null ? null : (int)(messageIdProgressDto.getProgress() % 65535);
     }
 
     /**

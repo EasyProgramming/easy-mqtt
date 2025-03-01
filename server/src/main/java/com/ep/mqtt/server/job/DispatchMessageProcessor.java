@@ -90,7 +90,7 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
         for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
             SendMessageDto sendMessageDto = new SendMessageDto();
             sendMessageDto.setReceiveQos(jobParam.getReceiveQos());
-            sendMessageDto.setReceivePacketId(String.valueOf(jobParam.getReceivePacketId()));
+            sendMessageDto.setReceivePacketId(jobParam.getReceivePacketId());
             sendMessageDto.setFromClientId(jobParam.getFromClientId());
             sendMessageDto.setSendQos(clientQosEntry.getValue().getCode() >= jobParam.getReceiveQos().getCode() ? jobParam.getReceiveQos() :
                     clientQosEntry.getValue());

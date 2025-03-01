@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.ep.mqtt.server.metadata.Qos;
 import com.ep.mqtt.server.metadata.YesOrNo;
+
 import lombok.Data;
 
 /**
@@ -18,7 +19,7 @@ public class SendMessageDto {
 
     private Qos receiveQos;
 
-    private String receivePacketId;
+    private Integer receivePacketId;
 
     private String fromClientId;
 
@@ -26,7 +27,7 @@ public class SendMessageDto {
 
     private String topic;
 
-    private String sendPacketId;
+    private Integer sendPacketId;
 
     private String toClientId;
 

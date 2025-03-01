@@ -29,7 +29,7 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
      * @param sendPacketId 消息id
      * @return 是否更新成功
      */
-    default boolean updateSendPacketId(Long sendMessageId, String sendPacketId){
+    default boolean updateSendPacketId(Long sendMessageId, Integer sendPacketId) {
         return update(Wrappers.lambdaUpdate(SendMessageDto.class).set(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getId,
                 sendMessageId).isNull(SendMessageDto::getSendPacketId)) > 0;
     }
@@ -42,7 +42,7 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
      * @param sendPacketId
      *            消息id
      */
-    default void deleteAtLeastOnceMessage(String toClientId, String sendPacketId) {
+    default void deleteAtLeastOnceMessage(String toClientId, Integer sendPacketId) {
         delete(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId)
             .eq(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getSendQos, Qos.LEVEL_1));
     }
@@ -55,7 +55,7 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
      * @param sendPacketId
      *            消息id
      */
-    default void updateReceivePubRec(String toClientId, String sendPacketId) {
+    default void updateReceivePubRec(String toClientId, Integer sendPacketId) {
         update(Wrappers.lambdaUpdate(SendMessageDto.class).set(SendMessageDto::getIsReceivePubRec, YesOrNo.YES)
             .eq(SendMessageDto::getToClientId, toClientId).eq(SendMessageDto::getSendPacketId, sendPacketId)
             .eq(SendMessageDto::getSendQos, Qos.LEVEL_2));

@@ -1,6 +1,7 @@
 package com.ep.mqtt.server.raft.transfer;
 
 import com.ep.mqtt.server.metadata.Qos;
+
 import lombok.Data;
 
 /**
@@ -14,7 +15,7 @@ public class SendMessage {
 
     private String topic;
 
-    private String sendPacketId;
+    private Integer sendPacketId;
 
     private String toClientId;
 

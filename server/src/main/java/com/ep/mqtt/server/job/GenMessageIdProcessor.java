@@ -39,7 +39,7 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
 
     @Override
     public AsyncJobExecuteResult process(AsyncJobDto asyncJobDto, GenMessageIdParam jobParam) {
-        Long messageId = messageIdProgressDao.genMessageId(jobParam.getToClientId());
+        Integer messageId = messageIdProgressDao.genMessageId(jobParam.getToClientId());
         if (messageId == null){
             return AsyncJobExecuteResult.SUCCESS;
         }
@@ -47,7 +47,7 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
         SendMessage sendMessage = new SendMessage();
         sendMessage.setSendQos(jobParam.getSendQos());
         sendMessage.setTopic(jobParam.getTopic());
-        sendMessage.setSendPacketId(String.valueOf(messageId));
+        sendMessage.setSendPacketId(messageId);
         sendMessage.setToClientId(jobParam.getToClientId());
         sendMessage.setPayload(jobParam.getPayload());
         sendMessage.setIsDup(false);
@@ -58,7 +58,7 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
                     new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
         }
         else {
-            if (sendMessageDao.updateSendPacketId(jobParam.getSendMessageId(), String.valueOf(messageId))) {
+            if (sendMessageDao.updateSendPacketId(jobParam.getSendMessageId(), messageId)) {
                 EasyMqttRaftClient.syncSend(JsonUtil.obj2String(new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
             }
         }
