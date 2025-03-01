@@ -1,5 +1,7 @@
 package com.ep.mqtt.server.db.dao;
 
+import java.util.List;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
@@ -52,11 +54,21 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
      *            客户端id
      * @param sendPacketId
      *            消息id
-     * @return 更新结果
      */
-    default boolean updateReceivePubRec(String toClientId, String sendPacketId) {
-        return update(Wrappers.lambdaUpdate(SendMessageDto.class).set(SendMessageDto::getIsReceivePubRec, YesOrNo.YES)
+    default void updateReceivePubRec(String toClientId, String sendPacketId) {
+        update(Wrappers.lambdaUpdate(SendMessageDto.class).set(SendMessageDto::getIsReceivePubRec, YesOrNo.YES)
             .eq(SendMessageDto::getToClientId, toClientId).eq(SendMessageDto::getSendPacketId, sendPacketId)
-            .eq(SendMessageDto::getSendQos, Qos.LEVEL_2)) > 0;
+            .eq(SendMessageDto::getSendQos, Qos.LEVEL_2));
+    }
+
+    /**
+     * 查询重试的消息
+     * 
+     * @param toClientId
+     *            客户端id
+     * @return 重试的消息
+     */
+    default List<SendMessageDto> selectRetryMessage(String toClientId) {
+        return selectList(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId));
     }
 }

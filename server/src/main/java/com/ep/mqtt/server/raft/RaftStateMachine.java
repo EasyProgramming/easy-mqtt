@@ -1,17 +1,15 @@
 package com.ep.mqtt.server.raft;
 
-import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
-import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
-import com.ep.mqtt.server.raft.transfer.SendMessage;
-import com.ep.mqtt.server.raft.transfer.TransferData;
-import com.ep.mqtt.server.session.Session;
-import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.store.TopicFilterStore;
-import com.ep.mqtt.server.util.JsonUtil;
-import com.ep.mqtt.server.util.MqttUtil;
-import com.google.common.collect.Sets;
-import io.vertx.core.impl.ConcurrentHashSet;
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.ratis.io.MD5Hash;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
@@ -27,15 +25,19 @@ import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.util.MD5FileUtil;
 import org.apache.ratis.util.TimeDuration;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
+import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
+import com.ep.mqtt.server.raft.transfer.SendMessage;
+import com.ep.mqtt.server.raft.transfer.TransferData;
+import com.ep.mqtt.server.session.Session;
+import com.ep.mqtt.server.session.SessionManager;
+import com.ep.mqtt.server.store.TopicFilterStore;
+import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.util.MqttUtil;
+import com.google.common.collect.Sets;
+
+import io.vertx.core.impl.ConcurrentHashSet;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author zbz
@@ -154,7 +156,7 @@ public class RaftStateMachine extends BaseStateMachine {
                 if (session != null){
                     MqttUtil.sendPublish(session.getChannelHandlerContext(), sendMessage.getIsDup(), sendMessage.getSendQos(), sendMessage.getIsRetain(),
                             sendMessage.getTopic(),
-                            sendMessage.getSendPacketId(), sendMessage.getPayload());
+                        Integer.parseInt(sendMessage.getSendPacketId()), sendMessage.getPayload());
                 }
 
                 break;

@@ -1,5 +1,8 @@
 package com.ep.mqtt.server.processor;
 
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
+
 import com.ep.mqtt.server.metadata.RaftCommand;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
@@ -8,12 +11,11 @@ import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.NettyUtil;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
 
 /**
  * 建立连接
@@ -58,7 +60,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
 
             boolean isCleanSession = mqttConnectMessage.variableHeader().isCleanSession();
 
-            inboundDeal.connect(clientIdentifier, isCleanSession);
+            boolean isRetrySendMessage = inboundDeal.connect(clientIdentifier, isCleanSession);
 
             // 新建内存会话
             Session session = new Session();
@@ -68,6 +70,10 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             session.setSessionId(NettyUtil.getSessionId(channelHandlerContext));
             session.setKeepAliveTimeSeconds(keepAliveTimeSeconds);
             SessionManager.bind(clientIdentifier, session);
+
+            if (isRetrySendMessage) {
+                inboundDeal.retrySendMessage(clientIdentifier);
+            }
 
             // 踢出重复会话
             CheckRepeatSession checkRepeatSession = new CheckRepeatSession();

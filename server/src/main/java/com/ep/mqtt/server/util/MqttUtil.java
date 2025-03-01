@@ -1,6 +1,7 @@
 package com.ep.mqtt.server.util;
 
 import com.ep.mqtt.server.metadata.Qos;
+
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -12,11 +13,11 @@ import io.netty.handler.codec.mqtt.*;
 public class MqttUtil {
 
     public static void sendPublish(ChannelHandlerContext channelHandlerContext, Boolean isDup, Qos qos, Boolean isRetain, String topic,
-                                   String messageId, String payload) {
+        Integer messageId, String payload) {
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup,
             MqttQoS.valueOf(qos.getCode()), isRetain, 0);
         MqttPublishVariableHeader mqttVariableHeader =
-            new MqttPublishVariableHeader(topic, Integer.parseInt(messageId));
+            new MqttPublishVariableHeader(topic, messageId);
         MqttPublishMessage mqttPublishMessage = new MqttPublishMessage(mqttFixedHeader, mqttVariableHeader,
             Unpooled.buffer().writeBytes(payload.getBytes()));
         channelHandlerContext.writeAndFlush(mqttPublishMessage);
