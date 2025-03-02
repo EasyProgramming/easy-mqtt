@@ -1,23 +1,24 @@
 package com.ep.mqtt.server.raft.server;
 
 import java.io.File;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.UUID;
 
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
-import com.ep.mqtt.server.config.MqttClusterProperties;
+import com.ep.mqtt.server.config.MqttServerProperties;
+import com.ep.mqtt.server.metadata.Constant;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import lombok.extern.slf4j.Slf4j;
@@ -30,20 +31,23 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
 
-    @Autowired
-    private MqttClusterProperties mqttClusterProperties;
-
     private EasyMqttRaftServer easyMqttRaftServer;
+
+    @Resource
+    private MqttServerProperties mqttServerProperties;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        Map<String, RaftPeer> allPeerMap = getAllPeerList();
+        String[] nodeAddresses = StringUtils.split(mqttServerProperties.getNodeAddress(), Constant.ENGLISH_COMMA);
 
-        UUID uuid = UUID.randomUUID();
-        RaftGroup raftGroup = RaftGroup.valueOf(RaftGroupId.valueOf(uuid), allPeerMap.values());
+        Map<String, RaftPeer> allPeerMap = getAllPeerList(nodeAddresses, mqttServerProperties.getNodePort());
 
-        RaftPeer currentPeer = allPeerMap.get(mqttClusterProperties.getCurrentNode().getId());
-        File storageDir = new File("/var/log/easy-mqtt/raft/" + currentPeer.getId());
+        RaftGroup raftGroup =
+            RaftGroup.valueOf(RaftGroupId.valueOf(ByteString.copyFrom("easy-mqtt".getBytes(StandardCharsets.UTF_8))), allPeerMap.values());
+
+        RaftPeer currentPeer = allPeerMap.get(nodeAddresses[0]);
+
+        File storageDir = new File(Constant.PROJECT_BASE_DIR + "/raft/" + currentPeer.getId());
 
         easyMqttRaftServer = new EasyMqttRaftServer(currentPeer, storageDir, raftGroup);
         easyMqttRaftServer.start();
@@ -56,23 +60,14 @@ public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
         EasyMqttRaftClient.close();
     }
 
-    private Map<String, RaftPeer> getAllPeerList() {
-        List<MqttClusterProperties.Node> nodeList = Lists.newArrayList();
-        nodeList.add(mqttClusterProperties.getCurrentNode());
-        if (!CollectionUtils.isEmpty(mqttClusterProperties.getOtherNodes())) {
-            nodeList.addAll(mqttClusterProperties.getOtherNodes());
-        }
-        if (CollectionUtils.isEmpty(nodeList)) {
-            throw new IllegalArgumentException("no cluster");
-        }
-
+    private Map<String, RaftPeer> getAllPeerList(String[] nodeAddresses, Integer nodePort) {
         Map<String, RaftPeer> raftPeerMap = Maps.newHashMap();
-        for (MqttClusterProperties.Node node : nodeList) {
-            if (raftPeerMap.get(node.getId()) != null) {
+        for (String nodeAddress : nodeAddresses) {
+            if (raftPeerMap.get(nodeAddress) != null) {
                 throw new IllegalArgumentException("id is repeat");
             }
-            raftPeerMap.put(node.getId(),
-                RaftPeer.newBuilder().setId(node.getId()).setAddress(node.getAddress()).setPriority(0).build());
+
+            raftPeerMap.put(nodeAddress, RaftPeer.newBuilder().setId(nodeAddress).setAddress(nodeAddress + ":" + nodePort).build());
         }
         return raftPeerMap;
     }

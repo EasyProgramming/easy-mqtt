@@ -1,9 +1,11 @@
 package com.ep.mqtt.server.config;
 
-import com.ep.mqtt.server.metadata.RunMode;
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+
+import com.ep.mqtt.server.metadata.RunMode;
+
+import lombok.Data;
 
 /**
  * @author zbz
@@ -17,7 +19,7 @@ public class MqttServerProperties {
     /**
      * 是否开启Epoll模式, linux下建议开启
      */
-    private Boolean isUseEpoll = false;
+    private Boolean isUseEpoll = true;
 
     /**
      * 是否开启ssl
@@ -45,6 +47,21 @@ public class MqttServerProperties {
     private Integer websocketPort = 8082;
 
     /**
+     * api的端口
+     */
+    private Integer apiPort = 8083;
+
+    /**
+     * 节点的端口（集群模式下，所有节点的端口需保持一致）
+     */
+    private Integer nodePort = 8084;
+
+    /**
+     * 节点的地址（集群模式下，各节点的地址需要以英文逗号拼接，需要注意的是：第一个地址需要为本机的地址）
+     */
+    private String nodeAddress = "127.0.0.1";
+
+    /**
      * websocket连接地址
      */
     private String websocketPath = "/websocket";
@@ -53,16 +70,6 @@ public class MqttServerProperties {
      * 认证接口地址，如果为null或空字符串则不鉴权
      */
     private String authenticationUrl;
-
-    /**
-     * 监听器的线程池大小
-     */
-    private Integer listenerPoolSize = Runtime.getRuntime().availableProcessors() * 2;
-
-    /**
-     * 处理消息线程池的大小
-     */
-    private Integer dealMessageThreadPoolSize = Runtime.getRuntime().availableProcessors() * 3;
 
     /**
      * 运行模式
