@@ -40,7 +40,7 @@ public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
     public void run(ApplicationArguments args) throws Exception {
         String[] nodeAddresses = StringUtils.split(mqttServerProperties.getNodeAddress(), Constant.ENGLISH_COMMA);
 
-        Map<String, RaftPeer> allPeerMap = getAllPeerList(nodeAddresses, mqttServerProperties.getNodePort());
+        Map<String, RaftPeer> allPeerMap = getAllPeerList(nodeAddresses);
 
         RaftGroup raftGroup =
             RaftGroup.valueOf(RaftGroupId.valueOf(ByteString.copyFrom("easy-mqtt".getBytes(StandardCharsets.UTF_8))), allPeerMap.values());
@@ -60,14 +60,14 @@ public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
         EasyMqttRaftClient.close();
     }
 
-    private Map<String, RaftPeer> getAllPeerList(String[] nodeAddresses, Integer nodePort) {
+    private Map<String, RaftPeer> getAllPeerList(String[] nodeAddresses) {
         Map<String, RaftPeer> raftPeerMap = Maps.newHashMap();
         for (String nodeAddress : nodeAddresses) {
             if (raftPeerMap.get(nodeAddress) != null) {
                 throw new IllegalArgumentException("id is repeat");
             }
 
-            raftPeerMap.put(nodeAddress, RaftPeer.newBuilder().setId(nodeAddress).setAddress(nodeAddress + ":" + nodePort).build());
+            raftPeerMap.put(nodeAddress, RaftPeer.newBuilder().setId(nodeAddress).setAddress(nodeAddress).build());
         }
         return raftPeerMap;
     }

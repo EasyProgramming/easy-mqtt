@@ -52,14 +52,9 @@ public class MqttServerProperties {
     private Integer apiPort = 8083;
 
     /**
-     * 节点的端口（集群模式下，所有节点的端口需保持一致）
-     */
-    private Integer nodePort = 8084;
-
-    /**
      * 节点的地址（集群模式下，各节点的地址需要以英文逗号拼接，需要注意的是：第一个地址需要为本机的地址）
      */
-    private String nodeAddress = "127.0.0.1";
+    private String nodeAddress = "127.0.0.1:8084";
 
     /**
      * websocket连接地址
