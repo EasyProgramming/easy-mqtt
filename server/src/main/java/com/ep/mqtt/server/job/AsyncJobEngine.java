@@ -1,5 +1,19 @@
 package com.ep.mqtt.server.job;
 
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.time.DateUtils;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
 import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
 import com.ep.mqtt.server.db.dao.AsyncJobDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
@@ -10,17 +24,8 @@ import com.ep.mqtt.server.metadata.Constant;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.TransactionUtil;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
-import javax.annotation.Resource;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author zbz
@@ -42,12 +47,17 @@ public class AsyncJobEngine {
     @Resource
     private TransactionUtil transactionUtil;
 
+    @Resource
+    private AsyncJobManage asyncJobManage;
+
     private final Map<AsyncJobBusinessType, AbstractJobProcessor<Object>> processorMap;
 
     public AsyncJobEngine(List<AbstractJobProcessor<Object>> abstractJobProcessorList){
-        QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryJobRunnable(), 60, 1, TimeUnit.SECONDS);
+        QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryJobRunnable(), 60, 100, TimeUnit.MILLISECONDS);
 
-        QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryTimeoutJobRunnable(), 1, 5, TimeUnit.MINUTES);
+        QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryTimeoutJobRunnable(), 1, 1, TimeUnit.DAYS);
+
+        QUERY_THREAD_POOL.scheduleWithFixedDelay(new CleanJobRunnable(), 1, 1, TimeUnit.DAYS);
 
         processorMap = abstractJobProcessorList.stream().collect(Collectors.toMap(AbstractJobProcessor::getBusinessType, b -> b));
     }
@@ -59,7 +69,7 @@ public class AsyncJobEngine {
             try {
                 long jobStart = System.currentTimeMillis();
 
-                List<AsyncJobDto> pendingJobList = asyncJobDao.getPendingJob(1000);
+                List<AsyncJobDto> pendingJobList = asyncJobDao.getPendingJob(2000);
                 if (CollectionUtils.isEmpty(pendingJobList)) {
                     return;
                 }
@@ -151,31 +161,51 @@ public class AsyncJobEngine {
 
         @Override
         public void run() {
-            String id = UUID.randomUUID().toString();
-            long jobStart = System.currentTimeMillis();
-            log.info("开始处理超时任务，任务id:{}", id);
+            Date executeTime = new Date();
+            DateUtils.setHours(executeTime, 23);
+            DateUtils.setMinutes(executeTime, 0);
+            DateUtils.setSeconds(executeTime, 0);
+            DateUtils.setMilliseconds(executeTime, 0);
 
-            List<AsyncJobDto> timeoutJobList = asyncJobDao.getExecuteTimeoutJob(1000);
-            if (CollectionUtils.isEmpty(timeoutJobList)) {
+            AsyncJobDto queryTimeoutJob = asyncJobDao.lock(AsyncJobBusinessType.QUERY_TIMEOUT_JOB.getBusinessId());
+            if (queryTimeoutJob == null) {
+                asyncJobManage.addJob(AsyncJobBusinessType.QUERY_TIMEOUT_JOB.getBusinessId(), AsyncJobBusinessType.DISPATCH_MESSAGE, null,
+                    executeTime);
                 return;
             }
 
-            for (AsyncJobDto timeoutJob : timeoutJobList) {
-                transactionUtil.transaction(() -> {
-                    AsyncJobDto lastAsyncJobDto = asyncJobDao.lock(timeoutJob.getBusinessId());
-
-                    if (!AsyncJobStatus.EXECUTING.equals(lastAsyncJobDto.getExecuteStatus())) {
-                        return null;
-                    }
-
-                    asyncJobDao.finishJob(lastAsyncJobDto.getBusinessId(), AsyncJobStatus.FINISH, lastAsyncJobDto.getExecuteNum(),
-                        AsyncJobExecuteResult.FAIL, "执行超时", null);
-                    return null;
-                });
+            if (AsyncJobStatus.EXECUTING.equals(queryTimeoutJob.getExecuteStatus())
+                || AsyncJobStatus.READY.equals(queryTimeoutJob.getExecuteStatus())) {
+                return;
             }
 
-            log.info("结束处理超时任务，任务id:{}, 耗时{}ms", id, System.currentTimeMillis() - jobStart);
+            asyncJobDao.deleteById(queryTimeoutJob.getId());
+            asyncJobManage.addJob(AsyncJobBusinessType.QUERY_TIMEOUT_JOB.getBusinessId(), AsyncJobBusinessType.DISPATCH_MESSAGE, null, executeTime);
         }
     }
 
+    public class CleanJobRunnable implements Runnable {
+
+        @Override
+        public void run() {
+            Date executeTime = new Date();
+            DateUtils.setHours(executeTime, 23);
+            DateUtils.setMinutes(executeTime, 0);
+            DateUtils.setSeconds(executeTime, 0);
+            DateUtils.setMilliseconds(executeTime, 0);
+
+            AsyncJobDto clearJob = asyncJobDao.lock(AsyncJobBusinessType.CLEAR_JOB.getBusinessId());
+            if (clearJob == null) {
+                asyncJobManage.addJob(AsyncJobBusinessType.CLEAR_JOB.getBusinessId(), AsyncJobBusinessType.CLEAR_JOB, null, executeTime);
+                return;
+            }
+
+            if (AsyncJobStatus.EXECUTING.equals(clearJob.getExecuteStatus()) || AsyncJobStatus.READY.equals(clearJob.getExecuteStatus())) {
+                return;
+            }
+
+            asyncJobDao.deleteById(clearJob.getId());
+            asyncJobManage.addJob(AsyncJobBusinessType.CLEAR_JOB.getBusinessId(), AsyncJobBusinessType.CLEAR_JOB, null, executeTime);
+        }
+    }
 }

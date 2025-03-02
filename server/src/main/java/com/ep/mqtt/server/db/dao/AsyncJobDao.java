@@ -1,14 +1,15 @@
 package com.ep.mqtt.server.db.dao;
 
+import java.util.Date;
+import java.util.List;
+
+import org.apache.commons.lang3.time.DateUtils;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
-import org.apache.commons.lang3.time.DateUtils;
-
-import java.util.Date;
-import java.util.List;
 
 /**
  * @author zbz
@@ -83,11 +84,28 @@ public interface AsyncJobDao extends BaseMapper<AsyncJobDto> {
      *
      * @param size
      *            单次获取的任务数
+     * @param now
+     *            当前时间
      * @return 执行超时的任务列表
      */
-    default List<AsyncJobDto> getExecuteTimeoutJob(Integer size) {
+    default List<AsyncJobDto> getExecuteTimeoutJob(Integer size, Date now) {
         return selectList(
-                Wrappers.lambdaQuery(AsyncJobDto.class).le(AsyncJobDto::getLastStartTime, DateUtils.addDays(new Date(), -1))
+            Wrappers.lambdaQuery(AsyncJobDto.class).lt(AsyncJobDto::getLastStartTime, DateUtils.addDays(now, -1))
                         .eq(AsyncJobDto::getExecuteStatus, AsyncJobStatus.EXECUTING).last("limit " + size));
+    }
+
+    /**
+     * 获取执行成功的任务
+     *
+     * @param size
+     *            单次获取的任务数
+     * @param now
+     *            当前时间
+     * @return 执行成功的任务列表
+     */
+    default List<AsyncJobDto> getExecuteSuccessJob(Integer size, Date now) {
+        return selectList(Wrappers.lambdaQuery(AsyncJobDto.class).lt(AsyncJobDto::getLastStartTime, DateUtils.addDays(now, -1))
+            .eq(AsyncJobDto::getExecuteStatus, AsyncJobStatus.FINISH).eq(AsyncJobDto::getLastExecuteResult, AsyncJobExecuteResult.SUCCESS)
+            .last("limit " + size));
     }
 }

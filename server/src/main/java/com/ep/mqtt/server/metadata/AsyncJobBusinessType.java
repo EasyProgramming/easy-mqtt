@@ -17,6 +17,16 @@ public enum AsyncJobBusinessType implements BaseEnum<String> {
      * 生成messageId
      */
     GEN_MESSAGE_ID("GEN_MESSAGE_ID", "生成messageId", "GEN_MESSAGE_ID_%s"),
+
+    /**
+     * 清理任务
+     */
+    CLEAR_JOB("CLEAR_JOB", "清理任务", "CLEAR_JOB"),
+
+    /**
+     * 查询处理超时任务
+     */
+    QUERY_TIMEOUT_JOB("QUERY_TIMEOUT_JOB", "查询处理超时任务", "QUERY_TIMEOUT_JOB"),
     ;
 
     private final String code;
