@@ -1,10 +1,23 @@
 package com.ep.mqtt.server.server;
 
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.util.List;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import com.ep.mqtt.server.codec.MqttWebSocketCodec;
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.deal.InboundDeal;
 import com.ep.mqtt.server.handler.MqttMessageHandler;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -27,16 +40,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLEngine;
-import java.io.FileInputStream;
-import java.security.KeyStore;
-import java.util.List;
 
 /**
  * @author zbz
@@ -70,26 +73,25 @@ public class MqttServer {
         log.info("init mqtt server");
         bossGroup = mqttServerProperties.getIsUseEpoll() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
         workerGroup = mqttServerProperties.getIsUseEpoll() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
-        if (mqttServerProperties.getIsOpenSsl()) {
+        if (mqttServerProperties.getSsl() != null) {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             try (FileInputStream sslCertificateFileInputStream =
-                new FileInputStream(mqttServerProperties.getSslCertificatePath())) {
+                new FileInputStream(mqttServerProperties.getSsl().getSslCertificatePath())) {
                 keyStore.load(sslCertificateFileInputStream,
-                    mqttServerProperties.getSslCertificatePassword().toCharArray());
+                    mqttServerProperties.getSsl().getSslCertificatePassword().toCharArray());
             }
             KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(keyStore, mqttServerProperties.getSslCertificatePassword().toCharArray());
+            kmf.init(keyStore, mqttServerProperties.getSsl().getSslCertificatePassword().toCharArray());
             sslContext = SslContextBuilder.forServer(kmf).build();
         }
         tcpServer();
         websocketServer();
-        log.info("start mqtt server, tcp port: {}, websocket port: {} ", mqttServerProperties.getTcpPort(),
-            mqttServerProperties.getWebsocketPort());
+        log.info("start mqtt server, time:[{}]", System.currentTimeMillis());
     }
 
     @PreDestroy
     public void stop() {
-        log.info("shutdown mqtt server");
+        log.info("shutdown mqtt server, time:[{}]", System.currentTimeMillis());
         bossGroup.shutdownGracefully();
         bossGroup = null;
         workerGroup.shutdownGracefully();
@@ -98,7 +100,7 @@ public class MqttServer {
         tcpChannel = null;
         websocketChannel.closeFuture().syncUninterruptibly();
         websocketChannel = null;
-        log.info("finish shutdown mqtt server");
+        log.info("finish shutdown mqtt server, time:[{}]", System.currentTimeMillis());
     }
 
     private void tcpServer() throws Exception {
@@ -124,6 +126,10 @@ public class MqttServer {
     }
 
     private void websocketServer() throws Exception {
+        if (mqttServerProperties.getWebSocket() == null) {
+            return;
+        }
+
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(bossGroup, workerGroup)
             .channel(
@@ -142,7 +148,7 @@ public class MqttServer {
                     // 将HTTP消息进行压缩编码
                     channelPipeline.addLast("compressor ", new HttpContentCompressor());
                     channelPipeline.addLast("protocol", new WebSocketServerProtocolHandler(
-                        mqttServerProperties.getWebsocketPath(), "mqtt,mqttv3.1,mqttv3.1.1", true, 65536));
+                        mqttServerProperties.getWebSocket().getWebsocketPath(), "mqtt,mqttv3.1,mqttv3.1.1", true, 65536));
                     channelPipeline.addLast("mqttWebSocketCodec", new MqttWebSocketCodec());
                     channelPipeline.addLast("mqttDecoder", new MqttDecoder());
                     channelPipeline.addLast("mqttEncoder", MqttEncoder.INSTANCE);
@@ -150,11 +156,11 @@ public class MqttServer {
                         new MqttMessageHandler(abstractMqttProcessorList, inboundDeal));
                 }
             });
-        websocketChannel = sb.bind(mqttServerProperties.getWebsocketPort()).sync().channel();
+        websocketChannel = sb.bind(mqttServerProperties.getWebSocket().getWebsocketPort()).sync().channel();
     }
 
     private void configSsl(SocketChannel socketChannel, ChannelPipeline channelPipeline) {
-        if (mqttServerProperties.getIsOpenSsl()) {
+        if (mqttServerProperties.getSsl() != null) {
             SSLEngine sslEngine = sslContext.newEngine(socketChannel.alloc());
             // 服务端模式
             sslEngine.setUseClientMode(false);

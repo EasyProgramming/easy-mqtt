@@ -22,19 +22,14 @@ public class MqttServerProperties {
     private Boolean isUseEpoll = true;
 
     /**
-     * 是否开启ssl
+     * ssl配置
      */
-    private Boolean isOpenSsl = false;
+    private Ssl ssl;
 
     /**
-     * SSL密钥文件密码
+     * webSocket配置
      */
-    private String sslCertificatePassword;
-
-    /**
-     * SSL证书文件的绝对路径，只支持pfx格式的证书
-     */
-    private String sslCertificatePath;
+    private WebSocket webSocket;
 
     /**
      * tcp端口（mqtt协议的端口）
@@ -42,24 +37,9 @@ public class MqttServerProperties {
     private Integer tcpPort = 8081;
 
     /**
-     * websocket端口
-     */
-    private Integer websocketPort = 8082;
-
-    /**
-     * api的端口
-     */
-    private Integer apiPort = 8083;
-
-    /**
      * 节点的地址（集群模式下，各节点的地址需要以英文逗号拼接，需要注意的是：第一个地址需要为本机的地址）
      */
-    private String nodeAddress = "127.0.0.1:8084";
-
-    /**
-     * websocket连接地址
-     */
-    private String websocketPath = "/websocket";
+    private String nodeAddress = "127.0.0.1:8082";
 
     /**
      * 认证接口地址，如果为null或空字符串则不鉴权
@@ -97,4 +77,29 @@ public class MqttServerProperties {
 
     }
 
+    @Data
+    public static class Ssl {
+        /**
+         * SSL密钥文件密码
+         */
+        private String sslCertificatePassword;
+
+        /**
+         * SSL证书文件的绝对路径，只支持pfx格式的证书
+         */
+        private String sslCertificatePath;
+    }
+
+    @Data
+    public static class WebSocket {
+        /**
+         * websocket端口
+         */
+        private Integer websocketPort = 8082;
+
+        /**
+         * websocket连接地址
+         */
+        private String websocketPath = "/websocket";
+    }
 }
