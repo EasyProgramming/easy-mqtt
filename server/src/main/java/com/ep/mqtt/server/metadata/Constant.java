@@ -6,9 +6,13 @@ package com.ep.mqtt.server.metadata;
  */
 public class Constant {
 
-    public final static String STORE_KEY_SPLIT = "/";
+    public final static String FORWARD_SLASH = "/";
 
-    public final static String TOPIC_FILTER_KEY_PREFIX = "topic_filter";
+    public final static String BACK_SLASH = "\\";
+
+    public static final String TOPIC_WILDCARDS_ONE = "+";
+
+    public static final String TOPIC_WILDCARDS_MORE = "#";
 
     public final static String ENGLISH_COMMA = ",";
 

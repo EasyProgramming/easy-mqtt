@@ -44,18 +44,4 @@ public class TopicUtil {
         }
     }
 
-    public static String convertTopicFilterToRegex(String topicFilter) {
-        String regex = topicFilter;
-        if (topicFilter.contains(String.valueOf(TOPIC_WILDCARDS_ONE))) {
-            regex = regex.replace("+", "[^/]*");
-        }
-        if (topicFilter.contains(String.valueOf(TOPIC_WILDCARDS_MORE))) {
-            regex = regex.replace("/#", "(?:/)?.*");
-        }
-        return regex;
-    }
-
-    public static boolean match(String topicFilter, String topicName) {
-        return topicName.matches(convertTopicFilterToRegex(topicFilter));
-    }
 }

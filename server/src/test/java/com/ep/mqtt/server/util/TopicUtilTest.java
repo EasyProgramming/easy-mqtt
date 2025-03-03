@@ -1,10 +1,6 @@
 package com.ep.mqtt.server.util;
 
-import java.util.Set;
-
 import org.junit.Test;
-
-import com.google.common.collect.Sets;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,30 +10,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class TopicUtilTest {
-
-    @Test
-    public void testConvertTopicFilterToRegex_1() {
-        String topicFilter = "/+";
-        Set<String> topicSet = Sets.newHashSet("/finance", "a/b/e/e/c/d", "c/ww/e/", "e/ww/e/c/c");
-        testConvertTopicFilterToRegex(topicFilter, topicSet);
-    }
-
-    @Test
-    public void testConvertTopicFilterToRegex_2() {
-        String topicFilter = "+/+/+/+/c/#";
-        Set<String> topicSet = Sets.newHashSet("/finance", "a/b/e/e/c/d", "c/ww/e/", "e/ww/e/c/c");
-        testConvertTopicFilterToRegex(topicFilter, topicSet);
-    }
-
-    private void testConvertTopicFilterToRegex(String topicFilter, Set<String> topicSet) {
-        String regex = TopicUtil.convertTopicFilterToRegex(topicFilter);
-        log.info("regex: {}", regex);
-        for (String topic : topicSet) {
-            if (topic.matches(regex)) {
-                log.info("match: {}", topic);
-            }
-        }
-    }
 
     @Test
     public void testValidateTopicFilter_1() {
