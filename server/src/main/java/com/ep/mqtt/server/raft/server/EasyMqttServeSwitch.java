@@ -1,11 +1,10 @@
 package com.ep.mqtt.server.raft.server;
 
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-
-import javax.annotation.Resource;
-
+import com.ep.mqtt.server.config.MqttServerProperties;
+import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
+import com.google.common.collect.Maps;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -16,12 +15,10 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
-import com.ep.mqtt.server.config.MqttServerProperties;
-import com.ep.mqtt.server.metadata.Constant;
-import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
-import com.google.common.collect.Maps;
-
-import lombok.extern.slf4j.Slf4j;
+import javax.annotation.Resource;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * @author : zbz
@@ -43,11 +40,12 @@ public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
         Map<String, RaftPeer> allPeerMap = getAllPeerList(nodeAddresses);
 
         RaftGroup raftGroup =
-            RaftGroup.valueOf(RaftGroupId.valueOf(ByteString.copyFrom("easy-mqtt".getBytes(StandardCharsets.UTF_8))), allPeerMap.values());
+            RaftGroup.valueOf(RaftGroupId.valueOf(ByteString.copyFrom("easy-mqtt-000000", StandardCharsets.UTF_8)), allPeerMap.values());
 
-        RaftPeer currentPeer = allPeerMap.get(nodeAddresses[0]);
+        RaftPeer currentPeer = allPeerMap.get(getId(nodeAddresses[0]));
 
         File storageDir = new File(Constant.PROJECT_BASE_DIR + "/raft/" + currentPeer.getId());
+        storageDir.mkdirs();
 
         easyMqttRaftServer = new EasyMqttRaftServer(currentPeer, storageDir, raftGroup);
         easyMqttRaftServer.start();
@@ -63,13 +61,18 @@ public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
     private Map<String, RaftPeer> getAllPeerList(String[] nodeAddresses) {
         Map<String, RaftPeer> raftPeerMap = Maps.newHashMap();
         for (String nodeAddress : nodeAddresses) {
-            if (raftPeerMap.get(nodeAddress) != null) {
+            String id = getId(nodeAddress);
+
+            if (raftPeerMap.get(id) != null) {
                 throw new IllegalArgumentException("id is repeat");
             }
 
-            raftPeerMap.put(nodeAddress, RaftPeer.newBuilder().setId(nodeAddress).setAddress(nodeAddress).build());
+            raftPeerMap.put(id, RaftPeer.newBuilder().setId(id).setAddress(nodeAddress).build());
         }
         return raftPeerMap;
     }
 
+    private String getId(String nodeAddress){
+        return StringUtils.replace(nodeAddress, ":", "-");
+    }
 }

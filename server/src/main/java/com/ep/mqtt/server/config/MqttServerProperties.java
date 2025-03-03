@@ -1,11 +1,10 @@
 package com.ep.mqtt.server.config;
 
+import com.ep.mqtt.server.metadata.RunMode;
+import io.netty.util.internal.PlatformDependent;
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-
-import com.ep.mqtt.server.metadata.RunMode;
-
-import lombok.Data;
 
 /**
  * @author zbz
@@ -17,9 +16,9 @@ import lombok.Data;
 public class MqttServerProperties {
 
     /**
-     * 是否开启Epoll模式, linux下建议开启
+     * 是否开启Epoll模式, linux下默认开启
      */
-    private Boolean isUseEpoll = true;
+    private Boolean isUseEpoll = "linux".equals(PlatformDependent.normalizedOs());
 
     /**
      * ssl配置

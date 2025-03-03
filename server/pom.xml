@@ -71,6 +71,12 @@
         </dependency>
 
         <dependency>
+            <artifactId>ratis-metrics-default</artifactId>
+            <groupId>org.apache.ratis</groupId>
+            <version>${ratis.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
             <version>${mybatis-plus-boot-starter.version}</version>
