@@ -1,15 +1,11 @@
 package com.ep.mqtt.server.store;
 
 import com.ep.mqtt.server.util.JsonUtil;
-import io.vertx.core.impl.ConcurrentHashSet;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author zbz
@@ -20,7 +16,7 @@ public class TopicFilterStore {
 
     private static final String LOCK_KEY = "TopicFilterStore";
 
-    private static final ConcurrentHashSet<String> TOPIC_FILTER_SET = new ConcurrentHashSet<>();
+    private static final Set<String> TOPIC_FILTER_SET = new HashSet<>();
 
     private static final TopicFilterTree TOPIC_FILTER_TREE = new TopicFilterTree();
 
@@ -44,7 +40,7 @@ public class TopicFilterStore {
         }
     }
 
-    public static ConcurrentHashSet<String> getTopicFilterSet() {
+    public static Set<String> getTopicFilterSet() {
         return TOPIC_FILTER_SET;
     }
 

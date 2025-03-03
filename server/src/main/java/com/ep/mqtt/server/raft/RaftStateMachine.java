@@ -1,15 +1,16 @@
 package com.ep.mqtt.server.raft;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-
+import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
+import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
+import com.ep.mqtt.server.raft.transfer.SendMessage;
+import com.ep.mqtt.server.raft.transfer.TransferData;
+import com.ep.mqtt.server.session.Session;
+import com.ep.mqtt.server.session.SessionManager;
+import com.ep.mqtt.server.store.TopicFilterStore;
+import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.util.MqttUtil;
+import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ratis.io.MD5Hash;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
@@ -25,19 +26,16 @@ import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.util.MD5FileUtil;
 import org.apache.ratis.util.TimeDuration;
 
-import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
-import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
-import com.ep.mqtt.server.raft.transfer.SendMessage;
-import com.ep.mqtt.server.raft.transfer.TransferData;
-import com.ep.mqtt.server.session.Session;
-import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.store.TopicFilterStore;
-import com.ep.mqtt.server.util.JsonUtil;
-import com.ep.mqtt.server.util.MqttUtil;
-import com.google.common.collect.Sets;
-
-import io.vertx.core.impl.ConcurrentHashSet;
-import lombok.extern.slf4j.Slf4j;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author zbz
@@ -50,9 +48,9 @@ public class RaftStateMachine extends BaseStateMachine {
 
         private final TermIndex applied;
 
-        private final ConcurrentHashSet<String> topicFilterSet = new ConcurrentHashSet<>();
+        private final Set<String> topicFilterSet = new HashSet<>();
 
-        State(TermIndex applied, ConcurrentHashSet<String> topicFilterSet) {
+        State(TermIndex applied, Set<String> topicFilterSet) {
             this.applied = applied;
             this.topicFilterSet.addAll(topicFilterSet);
         }
@@ -61,7 +59,7 @@ public class RaftStateMachine extends BaseStateMachine {
             return applied;
         }
 
-        public ConcurrentHashSet<String> getTopicFilterSet() {
+        public Set<String> getTopicFilterSet() {
             return topicFilterSet;
         }
     }
