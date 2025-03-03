@@ -1,34 +1,5 @@
 mqtt:
   server:
-    is-use-epoll: false
-    is-open-ssl: false
-    ssl-certificate-password: ""
-    ssl-certificate-path: ""
     tcp-port: 8081
-    websocket-port: 8082
-    api-port: 8083
-    websocket-path: "/websocket"
-    authentication-url: ""
-    listener-pool-size: 10
-    deal-message-thread-pool-size: 10
-  cluster:
-    current-node:
-      id:
-      address:
-    other-nodes:
-      - id:
-        address:
-      - id:
-        address:
-
-  kvrocks:
-    password:
-    pool:
-      min-idle: 12
-      max-active: 12
-      max-idle: 12
-      max-wait: -1
-      time-between-eviction-runs: -1
-    cluster:
-      nodes: 121.199.21.5:6666,47.98.117.35:6666
-      max-redirects: 2
+    node-address: 127.0.0.1:8082
+    run-mode: standalone
