@@ -6,6 +6,7 @@ import com.ep.mqtt.server.raft.transfer.SendMessage;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
+import com.ep.mqtt.server.store.RetainMessageStore;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.MqttUtil;
@@ -156,6 +157,14 @@ public class RaftStateMachine extends BaseStateMachine {
                         sendMessage.getTopic(), sendMessage.getSendPacketId(), sendMessage.getPayload());
                 }
 
+                break;
+            }
+            case ADD_RETAIN_MESSAGE: {
+                RetainMessageStore.add();
+                break;
+            }
+            case REMOVE_RETAIN_MESSAGE: {
+                RetainMessageStore.remove();
                 break;
             }
             default:

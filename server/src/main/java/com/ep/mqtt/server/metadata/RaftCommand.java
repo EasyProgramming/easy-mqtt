@@ -26,6 +26,15 @@ public enum RaftCommand implements BaseEnum<String> {
      */
     SEND_MESSAGE("SEND_MESSAGE", "发送消息"),
 
+    /**
+     * 增加retain message
+     */
+    ADD_RETAIN_MESSAGE("ADD_RETAIN_MESSAGE", "增加retain message"),
+
+    /**
+     * 删除retain message
+     */
+    REMOVE_RETAIN_MESSAGE("REMOVE_RETAIN_MESSAGE", "删除retain message"),
     ;
 
     private final String code;

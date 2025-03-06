@@ -1,17 +1,15 @@
 package com.ep.mqtt.server.store;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
+import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.util.ReadWriteLockUtil;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 
-import com.ep.mqtt.server.metadata.Constant;
-import com.ep.mqtt.server.util.JsonUtil;
-import com.google.common.collect.Maps;
-
-import lombok.Data;
+import java.util.*;
 
 /**
  * @author : zbz
@@ -19,10 +17,57 @@ import lombok.Data;
  */
 public class RetainMessageStore {
 
-    private static Map<String, RetainMessage> RETAIN_MESSAGE_MAP = Maps.newConcurrentMap();
+    private final static ReadWriteLockUtil LOCK = new ReadWriteLockUtil();
+
+    private final static Map<String, RetainMessage> RETAIN_MESSAGE_MAP = Maps.newConcurrentMap();
+
+    private final static TopicTree TOPIC_TREE = new TopicTree();
+
+    public static List<RetainMessage> matchRetainMessage(String topicFilter) {
+       return LOCK.readLock(()->{
+            Set<String> topicSet = TOPIC_TREE.match(topicFilter);
+
+            List<RetainMessage> retainMessageList = Lists.newArrayList();
+            for (String topic : topicSet){
+                RetainMessage retainMessage = RETAIN_MESSAGE_MAP.get(topic);
+                if (retainMessage == null){
+                    continue;
+                }
+
+                retainMessageList.add(retainMessage);
+            }
+
+            return retainMessageList;
+        });
+
+    }
+
+    public static void add(RetainMessage retainMessage) {
+        LOCK.writeLock(()->{
+            TOPIC_TREE.insert(retainMessage.getTopic());
+            RETAIN_MESSAGE_MAP.put(retainMessage.getTopic(), retainMessage);
+        });
+    }
+
+    public static void remove(String topic) {
+        LOCK.writeLock(()->{
+            TOPIC_TREE.delete(topic);
+            RETAIN_MESSAGE_MAP.remove(topic);
+        });
+    }
 
     @Data
     public static class RetainMessage {
+
+        private String topic;
+
+        private String payload;
+
+        private Qos receiveQos;
+
+        private Integer receivePacketId;
+
+        private String fromClientId;
 
     }
 
