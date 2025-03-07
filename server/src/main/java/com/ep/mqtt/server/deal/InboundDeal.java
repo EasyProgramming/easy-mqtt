@@ -191,49 +191,7 @@ public class InboundDeal {
         if (!CollectionUtils.isEmpty(editTopicFilterMap)){
             clientSubscribeDao.insertOrUpdate(editClientSubscribeDtoList);
 
-            Long validTime = now.getTime() + 1000L * 60 * 60 * 24 * 7;
-            List<SendMessageDto> qos0MessageDtoList = Lists.newArrayList();
-            List<SendMessageDto> otherMessageDtoList = Lists.newArrayList();
-            for (Map.Entry<String, Qos> entry : editTopicFilterMap.entrySet()) {
-                List<RetainMessageStore.RetainMessage> retainMessageList = RetainMessageStore.matchRetainMessage(entry.getKey());
-                if (CollectionUtils.isEmpty(retainMessageList)){
-                    continue;
-                }
-
-                for (RetainMessageStore.RetainMessage retainMessage : retainMessageList){
-                    SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
-                            retainMessage.getReceiveQos(),
-                            retainMessage.getReceivePacketId(),
-                            retainMessage.getFromClientId(),
-                            entry.getValue().getCode() >= retainMessage.getReceiveQos().getCode() ? retainMessage.getReceiveQos() : entry.getValue(),
-                            retainMessage.getTopic(),
-                            null,
-                            clientId,
-                            retainMessage.getPayload(),
-                            YesOrNo.NO,
-                            validTime,
-                            YesOrNo.YES
-                    );
-
-                    if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
-                        qos0MessageDtoList.add(sendMessageDto);
-                    } else {
-                        otherMessageDtoList.add(sendMessageDto);
-                    }
-                }
-            }
-
-            List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
-            for (SendMessageDto sendMessageDto : qos0MessageDtoList) {
-                genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
-            }
-            for (SendMessageDto sendMessageDto : otherMessageDtoList) {
-                genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
-            }
-
-            if (!CollectionUtils.isEmpty(genMessageIdAsyncJobDtoList)){
-                asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
-            }
+            dealRetainMessage(clientId, now, editTopicFilterMap);
 
             AddTopicFilter addTopicFilter = new AddTopicFilter();
             addTopicFilter.setTopicFilterSet(editTopicFilterMap.keySet());
@@ -242,6 +200,52 @@ public class InboundDeal {
         }
 
         MqttUtil.sendSubAck(channelHandlerContext, subMessageId, qoses);
+    }
+
+    private void dealRetainMessage(String clientId, Date now, Map<String, Qos> editTopicFilterMap){
+        Long validTime = now.getTime() + 1000L * 60 * 60 * 24 * 7;
+        List<SendMessageDto> qos0MessageDtoList = Lists.newArrayList();
+        List<SendMessageDto> otherMessageDtoList = Lists.newArrayList();
+        for (Map.Entry<String, Qos> entry : editTopicFilterMap.entrySet()) {
+            List<RetainMessageStore.RetainMessage> retainMessageList = RetainMessageStore.matchRetainMessage(entry.getKey());
+            if (CollectionUtils.isEmpty(retainMessageList)){
+                continue;
+            }
+
+            for (RetainMessageStore.RetainMessage retainMessage : retainMessageList){
+                SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
+                        retainMessage.getReceiveQos(),
+                        retainMessage.getReceivePacketId(),
+                        retainMessage.getFromClientId(),
+                        entry.getValue().getCode() >= retainMessage.getReceiveQos().getCode() ? retainMessage.getReceiveQos() : entry.getValue(),
+                        retainMessage.getTopic(),
+                        null,
+                        clientId,
+                        retainMessage.getPayload(),
+                        YesOrNo.NO,
+                        validTime,
+                        YesOrNo.YES
+                );
+
+                if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
+                    qos0MessageDtoList.add(sendMessageDto);
+                } else {
+                    otherMessageDtoList.add(sendMessageDto);
+                }
+            }
+        }
+
+        List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
+        for (SendMessageDto sendMessageDto : qos0MessageDtoList) {
+            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
+        }
+        for (SendMessageDto sendMessageDto : otherMessageDtoList) {
+            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
+        }
+
+        if (!CollectionUtils.isEmpty(genMessageIdAsyncJobDtoList)){
+            asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
