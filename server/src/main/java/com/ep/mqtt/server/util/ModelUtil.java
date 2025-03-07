@@ -1,10 +1,15 @@
 package com.ep.mqtt.server.util;
 
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
+import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.job.DispatchMessageParam;
+import com.ep.mqtt.server.job.GenMessageIdParam;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
 import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.YesOrNo;
+
+import java.util.UUID;
 
 /**
  * @author zbz
@@ -24,6 +29,18 @@ public class ModelUtil {
         return dispatchMessageParam;
     }
 
+    public static GenMessageIdParam buildGenMessageIdParam(Long sendMessageId, Qos sendQos, String topic, String toClientId, String payload, YesOrNo isRetain){
+        GenMessageIdParam genMessageIdParam = new GenMessageIdParam();
+        genMessageIdParam.setSendMessageId(sendMessageId);
+        genMessageIdParam.setSendQos(sendQos);
+        genMessageIdParam.setTopic(topic);
+        genMessageIdParam.setToClientId(toClientId);
+        genMessageIdParam.setPayload(payload);
+        genMessageIdParam.setIsRetain(isRetain);
+
+        return genMessageIdParam;
+    }
+
     public static <T> AsyncJobDto buildAsyncJobDto(String businessId, AsyncJobBusinessType asyncJobBusinessType, Long expectExecuteTime,
                                                    Integer executeNum, AsyncJobStatus executeStatus, T jobParam){
         AsyncJobDto asyncJobDto = new AsyncJobDto();
@@ -37,4 +54,41 @@ public class ModelUtil {
         return asyncJobDto;
     }
 
+    public static SendMessageDto buildSendMessageDto(Qos receiveQos, Integer receivePacketId, String fromClientId, Qos sendQos, String topic,
+                                                     Integer sendPacketId, String toClientId, String payload, YesOrNo isReceivePubRec,
+                                                     Long validTime, YesOrNo isRetain){
+        SendMessageDto sendMessageDto = new SendMessageDto();
+        sendMessageDto.setReceiveQos(receiveQos);
+        sendMessageDto.setReceivePacketId(receivePacketId);
+        sendMessageDto.setFromClientId(fromClientId);
+        sendMessageDto.setSendQos(sendQos);
+        sendMessageDto.setTopic(topic);
+        sendMessageDto.setSendPacketId(sendPacketId);
+        sendMessageDto.setToClientId(toClientId);
+        sendMessageDto.setPayload(payload);
+        sendMessageDto.setIsReceivePubRec(isReceivePubRec);
+        sendMessageDto.setValidTime(validTime);
+        sendMessageDto.setIsRetain(isRetain);
+        return sendMessageDto;
+    }
+
+    public static AsyncJobDto buildGenMessageIdAsyncJobDto(SendMessageDto sendMessageDto, Long now) {
+        GenMessageIdParam genMessageIdParam = ModelUtil.buildGenMessageIdParam(
+                sendMessageDto.getId(),
+                sendMessageDto.getSendQos(),
+                sendMessageDto.getTopic(),
+                sendMessageDto.getToClientId(),
+                sendMessageDto.getPayload(),
+                sendMessageDto.getIsRetain()
+        );
+
+        String businessId;
+        if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
+            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString());
+        } else {
+            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(sendMessageDto.getId());
+        }
+
+        return ModelUtil.buildAsyncJobDto(businessId, AsyncJobBusinessType.GEN_MESSAGE_ID, now, 0, AsyncJobStatus.READY, genMessageIdParam);
+    }
 }

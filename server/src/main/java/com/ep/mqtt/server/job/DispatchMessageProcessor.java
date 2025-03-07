@@ -19,7 +19,6 @@ import org.springframework.util.CollectionUtils;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -86,18 +85,20 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
         List<SendMessageDto> qos0MessageDtoList = Lists.newArrayList();
         List<SendMessageDto> otherMessageDtoList = Lists.newArrayList();
         for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
-            SendMessageDto sendMessageDto = new SendMessageDto();
-            sendMessageDto.setReceiveQos(jobParam.getReceiveQos());
-            sendMessageDto.setReceivePacketId(jobParam.getReceivePacketId());
-            sendMessageDto.setFromClientId(jobParam.getFromClientId());
-            sendMessageDto.setSendQos(clientQosEntry.getValue().getCode() >= jobParam.getReceiveQos().getCode() ? jobParam.getReceiveQos() :
-                    clientQosEntry.getValue());
-            sendMessageDto.setTopic(jobParam.getTopic());
-            sendMessageDto.setToClientId(clientQosEntry.getKey());
-            sendMessageDto.setPayload(jobParam.getPayload());
-            sendMessageDto.setIsReceivePubRec(YesOrNo.NO);
-            sendMessageDto.setValidTime(validTime);
-            sendMessageDto.setIsRetain(YesOrNo.NO);
+            SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
+                    jobParam.getReceiveQos(),
+                    jobParam.getReceivePacketId(),
+                    jobParam.getFromClientId(),
+                    clientQosEntry.getValue().getCode() >= jobParam.getReceiveQos().getCode() ? jobParam.getReceiveQos() :
+                            clientQosEntry.getValue(),
+                    jobParam.getTopic(),
+                    null,
+                    clientQosEntry.getKey(),
+                    jobParam.getPayload(),
+                    YesOrNo.NO,
+                    validTime,
+                    YesOrNo.NO
+            );
 
             if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
                 qos0MessageDtoList.add(sendMessageDto);
@@ -110,33 +111,14 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
         Long now = System.currentTimeMillis();
         List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
         for (SendMessageDto sendMessageDto : qos0MessageDtoList) {
-            genMessageIdAsyncJobDtoList.add(buildGenMessageIdAsyncJobDto(sendMessageDto, now));
+            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now));
         }
         for (SendMessageDto sendMessageDto : otherMessageDtoList) {
-            genMessageIdAsyncJobDtoList.add(buildGenMessageIdAsyncJobDto(sendMessageDto, now));
+            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now));
         }
         asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
 
         return AsyncJobExecuteResult.SUCCESS;
-    }
-
-    private AsyncJobDto buildGenMessageIdAsyncJobDto(SendMessageDto sendMessageDto, Long now) {
-        GenMessageIdParam genMessageIdParam = new GenMessageIdParam();
-        genMessageIdParam.setSendMessageId(sendMessageDto.getId());
-        genMessageIdParam.setSendQos(sendMessageDto.getSendQos());
-        genMessageIdParam.setTopic(sendMessageDto.getTopic());
-        genMessageIdParam.setToClientId(sendMessageDto.getToClientId());
-        genMessageIdParam.setPayload(sendMessageDto.getPayload());
-        genMessageIdParam.setIsRetain(sendMessageDto.getIsRetain());
-
-        String businessId;
-        if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
-            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString());
-        } else {
-            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(sendMessageDto.getId());
-        }
-
-        return ModelUtil.buildAsyncJobDto(businessId, AsyncJobBusinessType.GEN_MESSAGE_ID, now, 0, AsyncJobStatus.READY, genMessageIdParam);
     }
 
     @NonNull

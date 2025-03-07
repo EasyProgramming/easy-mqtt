@@ -15,7 +15,7 @@ import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.RetainMessageStore;
 import com.ep.mqtt.server.util.*;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
@@ -137,7 +137,7 @@ public class InboundDeal {
     }
 
     /**
-     * 处理订阅报文（暂不支持保留消息）
+     * 处理订阅报文
      * @param channelHandlerContext netty上下文
      * @param subMessageId 订阅报文的消息id
      * @param clientId 客户端id
@@ -156,7 +156,7 @@ public class InboundDeal {
 
         int index = 0;
         MqttQoS[] qoses = new MqttQoS[clientSubscribeList.size()];
-        Set<String> editTopicFilterSet = Sets.newHashSet();
+        Map<String, Qos> editTopicFilterMap = Maps.newHashMap();
         List<ClientSubscribeDto> editClientSubscribeDtoList = Lists.newArrayList();
         for (MqttTopicSubscription clientSubscribe : clientSubscribeList){
             qoses[index] = clientSubscribe.qualityOfService();
@@ -172,7 +172,7 @@ public class InboundDeal {
                     update.setSubscribeTime(now.getTime());
 
                     editClientSubscribeDtoList.add(update);
-                    editTopicFilterSet.add(existClientSubscribeDto.getTopicFilter());
+                    editTopicFilterMap.put(existClientSubscribeDto.getTopicFilter(), subscribeQos);
                 }
 
                 continue;
@@ -185,37 +185,58 @@ public class InboundDeal {
             insert.setTopicFilter(clientSubscribe.topicName());
 
             editClientSubscribeDtoList.add(insert);
-            editTopicFilterSet.add(clientSubscribe.topicName());
+            editTopicFilterMap.put(clientSubscribe.topicName(), subscribeQos);
         }
 
-        if (!CollectionUtils.isEmpty(editTopicFilterSet)){
+        if (!CollectionUtils.isEmpty(editTopicFilterMap)){
             clientSubscribeDao.insertOrUpdate(editClientSubscribeDtoList);
 
-            AddTopicFilter addTopicFilter = new AddTopicFilter();
-            addTopicFilter.setTopicFilterSet(editTopicFilterSet);
-
-            List<AsyncJobDto> dispatchMessageAsyncJobDtoList = Lists.newArrayList();
-            for (String editTopicFilter : editTopicFilterSet) {
-                List<RetainMessageStore.RetainMessage> retainMessageList = RetainMessageStore.matchRetainMessage(editTopicFilter);
+            Long validTime = now.getTime() + 1000L * 60 * 60 * 24 * 7;
+            List<SendMessageDto> qos0MessageDtoList = Lists.newArrayList();
+            List<SendMessageDto> otherMessageDtoList = Lists.newArrayList();
+            for (Map.Entry<String, Qos> entry : editTopicFilterMap.entrySet()) {
+                List<RetainMessageStore.RetainMessage> retainMessageList = RetainMessageStore.matchRetainMessage(entry.getKey());
                 if (CollectionUtils.isEmpty(retainMessageList)){
                     continue;
                 }
 
                 for (RetainMessageStore.RetainMessage retainMessage : retainMessageList){
-                    dispatchMessageAsyncJobDtoList.add(
-                            ModelUtil.buildAsyncJobDto(AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString()),
-                            AsyncJobBusinessType.GEN_MESSAGE_ID, now.getTime(), 0, AsyncJobStatus.READY,
-                            ModelUtil.buildDispatchMessageParam(retainMessage.getReceiveQos(), retainMessage.getTopic(),
-                                    retainMessage.getReceivePacketId(), retainMessage.getFromClientId(), retainMessage.getPayload()))
+                    SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
+                            retainMessage.getReceiveQos(),
+                            retainMessage.getReceivePacketId(),
+                            retainMessage.getFromClientId(),
+                            entry.getValue().getCode() >= retainMessage.getReceiveQos().getCode() ? retainMessage.getReceiveQos() : entry.getValue(),
+                            retainMessage.getTopic(),
+                            null,
+                            clientId,
+                            retainMessage.getPayload(),
+                            YesOrNo.NO,
+                            validTime,
+                            YesOrNo.YES
                     );
+
+                    if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
+                        qos0MessageDtoList.add(sendMessageDto);
+                    } else {
+                        otherMessageDtoList.add(sendMessageDto);
+                    }
                 }
-
             }
 
-            if (!CollectionUtils.isEmpty(dispatchMessageAsyncJobDtoList)){
-                asyncJobManage.addJob(dispatchMessageAsyncJobDtoList);
+            List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
+            for (SendMessageDto sendMessageDto : qos0MessageDtoList) {
+                genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
+            }
+            for (SendMessageDto sendMessageDto : otherMessageDtoList) {
+                genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
             }
 
+            if (!CollectionUtils.isEmpty(genMessageIdAsyncJobDtoList)){
+                asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
+            }
+
+            AddTopicFilter addTopicFilter = new AddTopicFilter();
+            addTopicFilter.setTopicFilterSet(editTopicFilterMap.keySet());
             EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
                     new TransferData(RaftCommand.ADD_TOPIC_FILTER, JsonUtil.obj2String(addTopicFilter))));
         }
