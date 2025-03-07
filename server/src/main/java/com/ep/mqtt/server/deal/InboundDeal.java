@@ -1,19 +1,5 @@
 package com.ep.mqtt.server.deal;
 
-import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import javax.annotation.Resource;
-
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
-
 import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.db.dao.*;
 import com.ep.mqtt.server.db.dto.*;
@@ -21,7 +7,9 @@ import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.job.DispatchMessageParam;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
+import com.ep.mqtt.server.raft.transfer.AddRetainMessage;
 import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
+import com.ep.mqtt.server.raft.transfer.RemoveRetainMessage;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
@@ -29,13 +17,26 @@ import com.ep.mqtt.server.util.*;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 入站报文处理器
@@ -193,8 +194,13 @@ public class InboundDeal {
             AddTopicFilter addTopicFilter = new AddTopicFilter();
             addTopicFilter.setTopicFilterSet(editTopicFilterSet);
 
-            EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
-                    new TransferData(RaftCommand.ADD_TOPIC_FILTER, JsonUtil.obj2String(addTopicFilter))));
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                @Override
+                public void afterCommit() {
+                    EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
+                            new TransferData(RaftCommand.ADD_TOPIC_FILTER, JsonUtil.obj2String(addTopicFilter))));
+                }
+            });
         }
 
         MqttUtil.sendSubAck(channelHandlerContext, subMessageId, qoses);
@@ -256,6 +262,37 @@ public class InboundDeal {
         String payload, boolean isRetain) {
         if (receiveQos == null) {
             return;
+        }
+
+        if (isRetain){
+            if (StringUtils.isBlank(payload)){
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        RemoveRetainMessage removeRetainMessage = new RemoveRetainMessage();
+                        removeRetainMessage.setTopic(topic);
+
+                        EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
+                                new TransferData(RaftCommand.REMOVE_RETAIN_MESSAGE, JsonUtil.obj2String(removeRetainMessage))));
+                    }
+                });
+            }
+            else {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        AddRetainMessage addRetainMessage = new AddRetainMessage();
+                        addRetainMessage.setFromClientId(fromClientId);
+                        addRetainMessage.setPayload(payload);
+                        addRetainMessage.setReceivePacketId(receivePacketId);
+                        addRetainMessage.setReceiveQos(receiveQos);
+                        addRetainMessage.setTopic(topic);
+
+                        EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
+                                new TransferData(RaftCommand.ADD_RETAIN_MESSAGE, JsonUtil.obj2String(addRetainMessage))));
+                    }
+                });
+            }
         }
 
         Date now = new Date();
