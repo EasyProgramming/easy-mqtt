@@ -1,15 +1,14 @@
 package com.ep.mqtt.server.raft;
 
-import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
-import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
-import com.ep.mqtt.server.raft.transfer.SendMessage;
-import com.ep.mqtt.server.raft.transfer.TransferData;
+import com.ep.mqtt.server.raft.transfer.*;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.RetainMessageStore;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.MqttUtil;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ratis.io.MD5Hash;
@@ -35,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -51,9 +51,12 @@ public class RaftStateMachine extends BaseStateMachine {
 
         private final Set<String> topicFilterSet = new HashSet<>();
 
-        State(TermIndex applied, Set<String> topicFilterSet) {
+        private final Map<String, RetainMessageStore.RetainMessage> retainMessageMap = Maps.newHashMap();
+
+        State(TermIndex applied, Set<String> topicFilterSet, Map<String, RetainMessageStore.RetainMessage> retainMessageMap) {
             this.applied = applied;
             this.topicFilterSet.addAll(topicFilterSet);
+            this.retainMessageMap.putAll(retainMessageMap);
         }
 
         TermIndex getApplied() {
@@ -63,6 +66,12 @@ public class RaftStateMachine extends BaseStateMachine {
         public Set<String> getTopicFilterSet() {
             return topicFilterSet;
         }
+
+        public Map<String, RetainMessageStore.RetainMessage> getRetainMessageMap() {
+            return retainMessageMap;
+        }
+
+
     }
 
     private final static String SPLIT_FLAG = "--split--";
@@ -160,11 +169,30 @@ public class RaftStateMachine extends BaseStateMachine {
                 break;
             }
             case ADD_RETAIN_MESSAGE: {
-                RetainMessageStore.add();
+                AddRetainMessage addRetainMessage =
+                        JsonUtil.string2Obj(transferData.getData(), AddRetainMessage.class);
+                if (addRetainMessage == null) {
+                    break;
+                }
+
+                RetainMessageStore.RetainMessage retainMessage = new RetainMessageStore.RetainMessage();
+                retainMessage.setFromClientId(addRetainMessage.getFromClientId());
+                retainMessage.setPayload(addRetainMessage.getPayload());
+                retainMessage.setReceivePacketId(addRetainMessage.getReceivePacketId());
+                retainMessage.setReceiveQos(addRetainMessage.getReceiveQos());
+                retainMessage.setTopic(addRetainMessage.getTopic());
+
+                RetainMessageStore.add(retainMessage);
                 break;
             }
             case REMOVE_RETAIN_MESSAGE: {
-                RetainMessageStore.remove();
+                RemoveRetainMessage removeRetainMessage =
+                        JsonUtil.string2Obj(transferData.getData(), RemoveRetainMessage.class);
+                if (removeRetainMessage == null) {
+                    break;
+                }
+
+                RetainMessageStore.remove(removeRetainMessage.getTopic());
                 break;
             }
             default:
@@ -184,6 +212,15 @@ public class RaftStateMachine extends BaseStateMachine {
         try (BufferedWriter out = Files.newBufferedWriter(snapshotFile.toPath())) {
             for (String topicFilter : state.getTopicFilterSet()) {
                 out.write(topicFilter);
+                out.newLine();
+            }
+
+            // 写入分割行
+            out.write(SPLIT_FLAG);
+            out.newLine();
+
+            for (Map.Entry<String, RetainMessageStore.RetainMessage> entry : state.getRetainMessageMap().entrySet()) {
+                out.write(JsonUtil.obj2String(entry));
                 out.newLine();
             }
         } catch (IOException ioe) {
@@ -223,15 +260,30 @@ public class RaftStateMachine extends BaseStateMachine {
 
         // read the counter value from the snapshot file
         final Set<String> topicFilterSet = Sets.newHashSet();
+        final Map<String, RetainMessageStore.RetainMessage> retainMessageMap = Maps.newHashMap();
         try (BufferedReader in = Files.newBufferedReader(snapshotPath)) {
             String line;
             while ((line = in.readLine()) != null) {
+                if (line.equals(SPLIT_FLAG)) {
+                    break;
+                }
+
                 topicFilterSet.add(line);
+            }
+
+            while ((line = in.readLine()) != null) {
+                Map.Entry<String, RetainMessageStore.RetainMessage> entry = JsonUtil.string2Obj(line, new TypeReference<Map.Entry<String,
+                        RetainMessageStore.RetainMessage>>() {});
+                if (entry == null){
+                    continue;
+                }
+
+                retainMessageMap.put(entry.getKey(), entry.getValue());
             }
         }
 
         // update state
-        updateState(last, topicFilterSet);
+        updateState(last, topicFilterSet, retainMessageMap);
     }
 
     @Override
@@ -247,15 +299,19 @@ public class RaftStateMachine extends BaseStateMachine {
     }
 
     private synchronized State getState() {
-        return new State(getLastAppliedTermIndex(), TopicFilterStore.getTopicFilterSet());
+        return new State(getLastAppliedTermIndex(), TopicFilterStore.getTopicFilterSet(), RetainMessageStore.getRetainMessageMap());
     }
 
-    private synchronized void updateState(TermIndex applied, Set<String> topicFilterSet) {
+    private synchronized void updateState(TermIndex applied, Set<String> topicFilterSet,
+                                          Map<String, RetainMessageStore.RetainMessage> retainMessageMap) {
         updateLastAppliedTermIndex(applied);
 
-        // 初始化数据
         for (String topicFilter : topicFilterSet){
             TopicFilterStore.add(topicFilter);
+        }
+
+        for (Map.Entry<String, RetainMessageStore.RetainMessage> entry : retainMessageMap.entrySet()){
+            RetainMessageStore.add(entry.getValue());
         }
     }
 }

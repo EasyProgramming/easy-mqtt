@@ -56,6 +56,10 @@ public class RetainMessageStore {
         });
     }
 
+    public static Map<String, RetainMessage> getRetainMessageMap() {
+        return RETAIN_MESSAGE_MAP;
+    }
+
     @Data
     public static class RetainMessage {
 
