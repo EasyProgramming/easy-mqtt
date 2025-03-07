@@ -235,6 +235,10 @@ public class InboundDeal {
             }
         }
 
+        if (!CollectionUtils.isEmpty(otherMessageDtoList)){
+            sendMessageDao.insert(otherMessageDtoList, 10000);
+        }
+
         List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
         for (SendMessageDto sendMessageDto : qos0MessageDtoList) {
             genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
