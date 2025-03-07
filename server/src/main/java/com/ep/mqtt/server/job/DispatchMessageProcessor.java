@@ -1,18 +1,5 @@
 package com.ep.mqtt.server.job;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Resource;
-
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-
 import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
@@ -20,11 +7,22 @@ import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.store.TopicFilterStore;
-import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.util.ModelUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author : zbz
@@ -123,14 +121,6 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
     }
 
     private AsyncJobDto buildGenMessageIdAsyncJobDto(SendMessageDto sendMessageDto, Long now) {
-        AsyncJobDto genMessageIdAsyncJobDto = new AsyncJobDto();
-
-        if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
-            genMessageIdAsyncJobDto.setBusinessId(AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString()));
-        } else {
-            genMessageIdAsyncJobDto.setBusinessId(AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(sendMessageDto.getId()));
-        }
-
         GenMessageIdParam genMessageIdParam = new GenMessageIdParam();
         genMessageIdParam.setSendMessageId(sendMessageDto.getId());
         genMessageIdParam.setSendQos(sendMessageDto.getSendQos());
@@ -138,14 +128,15 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
         genMessageIdParam.setToClientId(sendMessageDto.getToClientId());
         genMessageIdParam.setPayload(sendMessageDto.getPayload());
         genMessageIdParam.setIsRetain(sendMessageDto.getIsRetain());
-        genMessageIdAsyncJobDto.setJobParam(JsonUtil.obj2String(genMessageIdParam));
 
-        genMessageIdAsyncJobDto.setBusinessType(AsyncJobBusinessType.GEN_MESSAGE_ID);
-        genMessageIdAsyncJobDto.setExpectExecuteTime(now);
-        genMessageIdAsyncJobDto.setExecuteNum(0);
-        genMessageIdAsyncJobDto.setExecuteStatus(AsyncJobStatus.READY);
+        String businessId;
+        if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
+            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString());
+        } else {
+            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(sendMessageDto.getId());
+        }
 
-        return genMessageIdAsyncJobDto;
+        return ModelUtil.buildAsyncJobDto(businessId, AsyncJobBusinessType.GEN_MESSAGE_ID, now, 0, AsyncJobStatus.READY, genMessageIdParam);
     }
 
     @NonNull

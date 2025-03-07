@@ -4,7 +4,6 @@ import com.ep.mqtt.server.config.MqttServerProperties;
 import com.ep.mqtt.server.db.dao.*;
 import com.ep.mqtt.server.db.dto.*;
 import com.ep.mqtt.server.job.AsyncJobManage;
-import com.ep.mqtt.server.job.DispatchMessageParam;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.AddRetainMessage;
@@ -13,6 +12,7 @@ import com.ep.mqtt.server.raft.transfer.RemoveRetainMessage;
 import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
+import com.ep.mqtt.server.store.RetainMessageStore;
 import com.ep.mqtt.server.util.*;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -194,13 +194,30 @@ public class InboundDeal {
             AddTopicFilter addTopicFilter = new AddTopicFilter();
             addTopicFilter.setTopicFilterSet(editTopicFilterSet);
 
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-                @Override
-                public void afterCommit() {
-                    EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
-                            new TransferData(RaftCommand.ADD_TOPIC_FILTER, JsonUtil.obj2String(addTopicFilter))));
+            List<AsyncJobDto> dispatchMessageAsyncJobDtoList = Lists.newArrayList();
+            for (String editTopicFilter : editTopicFilterSet) {
+                List<RetainMessageStore.RetainMessage> retainMessageList = RetainMessageStore.matchRetainMessage(editTopicFilter);
+                if (CollectionUtils.isEmpty(retainMessageList)){
+                    continue;
                 }
-            });
+
+                for (RetainMessageStore.RetainMessage retainMessage : retainMessageList){
+                    dispatchMessageAsyncJobDtoList.add(
+                            ModelUtil.buildAsyncJobDto(AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString()),
+                            AsyncJobBusinessType.GEN_MESSAGE_ID, now.getTime(), 0, AsyncJobStatus.READY,
+                            ModelUtil.buildDispatchMessageParam(retainMessage.getReceiveQos(), retainMessage.getTopic(),
+                                    retainMessage.getReceivePacketId(), retainMessage.getFromClientId(), retainMessage.getPayload()))
+                    );
+                }
+
+            }
+
+            if (!CollectionUtils.isEmpty(dispatchMessageAsyncJobDtoList)){
+                asyncJobManage.addJob(dispatchMessageAsyncJobDtoList);
+            }
+
+            EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
+                    new TransferData(RaftCommand.ADD_TOPIC_FILTER, JsonUtil.obj2String(addTopicFilter))));
         }
 
         MqttUtil.sendSubAck(channelHandlerContext, subMessageId, qoses);
@@ -316,14 +333,9 @@ public class InboundDeal {
             return;
         }
 
-        DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
-        dispatchMessageParam.setReceiveQos(receiveQos);
-        dispatchMessageParam.setTopic(topic);
-        dispatchMessageParam.setReceivePacketId(receivePacketId);
-        dispatchMessageParam.setFromClientId(fromClientId);
-        dispatchMessageParam.setPayload(payload);
         asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
-            AsyncJobBusinessType.DISPATCH_MESSAGE, dispatchMessageParam, now);
+            AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload),
+                now);
 
         if (Qos.LEVEL_0 == receiveQos) {
             return;
@@ -337,14 +349,10 @@ public class InboundDeal {
         ReceiveQos2MessageDto receiveQos2MessageDto = receiveQos2MessageDao.selectByFromClientIdAndReceivePacketId(fromClientId, receivePacketId);
         if (receiveQos2MessageDto != null) {
             if (receiveQos2MessageDao.deleteByFromClientIdAndReceivePacketId(fromClientId, receivePacketId)) {
-                DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
-                dispatchMessageParam.setReceiveQos(receiveQos2MessageDto.getReceiveQos());
-                dispatchMessageParam.setTopic(receiveQos2MessageDto.getTopic());
-                dispatchMessageParam.setReceivePacketId(receiveQos2MessageDto.getReceivePacketId());
-                dispatchMessageParam.setFromClientId(receiveQos2MessageDto.getFromClientId());
-                dispatchMessageParam.setPayload(receiveQos2MessageDto.getPayload());
                 asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
-                    AsyncJobBusinessType.DISPATCH_MESSAGE, dispatchMessageParam, new Date());
+                    AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos2MessageDto.getReceiveQos(),
+                                receiveQos2MessageDto.getTopic(), receiveQos2MessageDto.getReceivePacketId(),
+                                receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload()), new Date());
             }
         }
 
