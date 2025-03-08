@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.raft;
 
+import com.ep.mqtt.server.metadata.DisconnectReason;
 import com.ep.mqtt.server.raft.transfer.*;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
@@ -7,6 +8,7 @@ import com.ep.mqtt.server.store.RetainMessageStore;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.MqttUtil;
+import com.ep.mqtt.server.util.NettyUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -149,6 +151,7 @@ public class RaftStateMachine extends BaseStateMachine {
 
                 Session session = SessionManager.get(checkRepeatSession.getClientId());
                 if (session != null && !session.getSessionId().equals(checkRepeatSession.getSessionId())) {
+                    NettyUtil.setDisconnectReason(session.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
                     session.getChannelHandlerContext().disconnect();
                 }
                 break;

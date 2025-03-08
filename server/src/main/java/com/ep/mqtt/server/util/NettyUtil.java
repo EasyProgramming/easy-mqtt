@@ -1,5 +1,7 @@
 package com.ep.mqtt.server.util;
 
+import com.ep.mqtt.server.metadata.BaseEnum;
+import com.ep.mqtt.server.metadata.DisconnectReason;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
 
@@ -25,12 +27,12 @@ public class NettyUtil {
         return channelHandlerContext.channel().id().asLongText();
     }
 
-    public static void setCleanDataReason(ChannelHandlerContext channelHandlerContext, String reason) {
-        channelHandlerContext.channel().attr(CLEAN_DATA_REASON_ATTR_KEY).set(reason);
+    public static void setDisconnectReason(ChannelHandlerContext channelHandlerContext, DisconnectReason reason) {
+        channelHandlerContext.channel().attr(CLEAN_DATA_REASON_ATTR_KEY).set(reason.getCode());
     }
 
-    public static String getCleanDataReason(ChannelHandlerContext channelHandlerContext) {
-        return channelHandlerContext.channel().attr(CLEAN_DATA_REASON_ATTR_KEY).get();
+    public static DisconnectReason getDisconnectReason(ChannelHandlerContext channelHandlerContext) {
+        return BaseEnum.getByCode(channelHandlerContext.channel().attr(CLEAN_DATA_REASON_ATTR_KEY).get(), DisconnectReason.class);
     }
 
 }

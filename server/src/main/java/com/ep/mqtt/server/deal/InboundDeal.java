@@ -76,6 +76,9 @@ public class InboundDeal {
     @Resource
     private TransactionUtil transactionUtil;
 
+    @Resource
+    private CommonDeal clearClientData;
+
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
             return true;
@@ -125,15 +128,6 @@ public class InboundDeal {
                 log.error("客户端id：[{}]，重发消息异常", clientId, e);
             }
         });
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public void clearClientData(String clientId) {
-        clientDao.deleteByClientId(clientId);
-        clientSubscribeDao.deleteByClientId(clientId);
-        receiveQos2MessageDao.deleteByFromClientId(clientId);
-        sendMessageDao.deleteByToClientId(clientId);
-        messageIdProgressDao.deleteByClientId(clientId);
     }
 
     /**
@@ -278,7 +272,7 @@ public class InboundDeal {
         if (isCleanSession) {
             if (existClientDto != null) {
                 // 清除之前的数据
-                clearClientData(clientId);
+                clearClientData.clearClientData(clientId);
             }
 
             saveClientInfo(clientId, true);
@@ -292,7 +286,7 @@ public class InboundDeal {
 
         // 之前有会话，但之前的会话的设置的不持久化数据，所以清理之前的数据
         if (YesOrNo.YES.equals(existClientDto.getIsCleanSession())) {
-            clearClientData(clientId);
+            clearClientData.clearClientData(clientId);
             saveClientInfo(clientId, false);
             return false;
         }
@@ -389,7 +383,7 @@ public class InboundDeal {
     }
 
     public void disConnect(ChannelHandlerContext channelHandlerContext){
-        NettyUtil.setCleanDataReason(channelHandlerContext, "disConnect");
+        NettyUtil.setDisconnectReason(channelHandlerContext, DisconnectReason.NORMAL);
 
         channelHandlerContext.close();
     }

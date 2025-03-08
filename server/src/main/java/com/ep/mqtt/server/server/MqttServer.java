@@ -1,23 +1,10 @@
 package com.ep.mqtt.server.server;
 
-import java.io.FileInputStream;
-import java.security.KeyStore;
-import java.util.List;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLEngine;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import com.ep.mqtt.server.codec.MqttWebSocketCodec;
 import com.ep.mqtt.server.config.MqttServerProperties;
-import com.ep.mqtt.server.deal.InboundDeal;
+import com.ep.mqtt.server.deal.CommonDeal;
 import com.ep.mqtt.server.handler.MqttMessageHandler;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
-
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -40,6 +27,16 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.util.List;
 
 /**
  * @author zbz
@@ -56,7 +53,7 @@ public class MqttServer {
     private List<AbstractMqttProcessor<?>> abstractMqttProcessorList;
 
     @Autowired
-    private InboundDeal inboundDeal;
+    private CommonDeal commonDeal;
 
     private EventLoopGroup bossGroup;
 
@@ -119,7 +116,7 @@ public class MqttServer {
                     channelPipeline.addLast("mqttDecoder", new MqttDecoder());
                     channelPipeline.addLast("mqttEncoder", MqttEncoder.INSTANCE);
                     channelPipeline.addLast("mqttMessageHandler",
-                        new MqttMessageHandler(abstractMqttProcessorList, inboundDeal));
+                        new MqttMessageHandler(abstractMqttProcessorList, commonDeal));
                 }
             });
         tcpChannel = sb.bind(mqttServerProperties.getTcpPort()).sync().channel();
@@ -153,7 +150,7 @@ public class MqttServer {
                     channelPipeline.addLast("mqttDecoder", new MqttDecoder());
                     channelPipeline.addLast("mqttEncoder", MqttEncoder.INSTANCE);
                     channelPipeline.addLast("mqttMessageHandler",
-                        new MqttMessageHandler(abstractMqttProcessorList, inboundDeal));
+                        new MqttMessageHandler(abstractMqttProcessorList, commonDeal));
                 }
             });
         websocketChannel = sb.bind(mqttServerProperties.getWebSocket().getWebsocketPort()).sync().channel();
