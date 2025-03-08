@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.session;
 
+import com.ep.mqtt.server.metadata.Qos;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.Data;
 
@@ -19,5 +20,20 @@ public class Session {
     private Integer keepAliveTimeSeconds;
 
     private ChannelHandlerContext channelHandlerContext;
+
+    private WillMessage willMessage;
+
+    @Data
+    public static class WillMessage {
+
+        private Qos qos;
+
+        private String topic;
+
+        private Boolean isRetain;
+
+        private String payload;
+
+    }
 
 }

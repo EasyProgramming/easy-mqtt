@@ -1,8 +1,7 @@
 package com.ep.mqtt.server.processor;
 
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
-
+import com.ep.mqtt.server.metadata.BaseEnum;
+import com.ep.mqtt.server.metadata.Qos;
 import com.ep.mqtt.server.metadata.RaftCommand;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
@@ -11,11 +10,14 @@ import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.NettyUtil;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * 建立连接
@@ -69,6 +71,8 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             session.setChannelHandlerContext(channelHandlerContext);
             session.setSessionId(NettyUtil.getSessionId(channelHandlerContext));
             session.setKeepAliveTimeSeconds(keepAliveTimeSeconds);
+            setWillMessage(session, mqttConnectMessage);
+
             SessionManager.bind(clientIdentifier, session);
 
             if (isRetrySendMessage) {
@@ -89,6 +93,20 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false,
                 true);
         }
+    }
+
+    private void setWillMessage(Session session, MqttConnectMessage mqttConnectMessage){
+        if (!mqttConnectMessage.variableHeader().isWillFlag()){
+            return;
+        }
+
+        Session.WillMessage willMessage = new Session.WillMessage();
+        willMessage.setIsRetain(mqttConnectMessage.variableHeader().isWillRetain());
+        willMessage.setPayload(new String(mqttConnectMessage.payload().willMessageInBytes(), StandardCharsets.UTF_8));
+        willMessage.setQos(BaseEnum.getByCode(mqttConnectMessage.variableHeader().willQos(), Qos.class));
+        willMessage.setTopic(mqttConnectMessage.payload().willTopic());
+
+        session.setWillMessage(willMessage);
     }
 
     private int keepAlive(ChannelHandlerContext channelHandlerContext, MqttConnectMessage mqttConnectMessage) {
