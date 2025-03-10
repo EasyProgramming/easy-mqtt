@@ -40,10 +40,7 @@ public interface ClientDao extends BaseMapper<ClientDto> {
      *            连接时间
      */
     default void updateConnectTime(String clientId, Long connectTime) {
-        ClientDto update = new ClientDto();
-        update.setLastConnectTime(connectTime);
-
-        this.update(update, Wrappers.lambdaQuery(ClientDto.class).eq(ClientDto::getClientId, clientId));
+        this.update(Wrappers.lambdaUpdate(ClientDto.class).set(ClientDto::getLastConnectTime, connectTime).eq(ClientDto::getClientId, clientId));
     }
 
 }
