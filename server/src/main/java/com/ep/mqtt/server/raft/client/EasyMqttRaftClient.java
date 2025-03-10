@@ -1,11 +1,11 @@
 package com.ep.mqtt.server.raft.client;
 
-import java.io.IOException;
-
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftGroup;
+
+import java.io.IOException;
 
 /**
  * @author : zbz

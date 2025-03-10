@@ -105,10 +105,8 @@ public class RaftStateMachine extends BaseStateMachine {
 
     @Override
     public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
-
-        executeCommand(
-            TransferData.convert(trx.getClientRequest().getMessage().getContent().toString(StandardCharsets.UTF_8)),
-            TermIndex.valueOf(trx.getLogEntry()));
+        executeCommand(TransferData.convert(trx.getLogEntry().getStateMachineLogEntry().getLogData().toString(StandardCharsets.UTF_8)),
+                TermIndex.valueOf(trx.getLogEntry()));
 
         return CompletableFuture.completedFuture(Message.EMPTY);
     }
@@ -149,10 +147,12 @@ public class RaftStateMachine extends BaseStateMachine {
                     break;
                 }
 
-                Session session = SessionManager.get(checkRepeatSession.getClientId());
-                if (session != null && !session.getSessionId().equals(checkRepeatSession.getSessionId())) {
-                    NettyUtil.setDisconnectReason(session.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
-                    session.getChannelHandlerContext().disconnect();
+                Session existSession = SessionManager.get(checkRepeatSession.getClientId());
+                if (existSession != null && !existSession.getSessionId().equals(checkRepeatSession.getSessionId())) {
+                    SessionManager.unbind(checkRepeatSession.getClientId());
+
+                    NettyUtil.setDisconnectReason(existSession.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
+                    existSession.getChannelHandlerContext().disconnect();
                 }
                 break;
             }

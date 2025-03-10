@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.session;
 
+import com.ep.mqtt.server.metadata.DisconnectReason;
 import com.ep.mqtt.server.util.NettyUtil;
 import com.google.common.collect.Maps;
 
@@ -14,6 +15,14 @@ public class SessionManager {
     private static final Map<String, Session> SESSION_MAP = Maps.newConcurrentMap();
 
     public static void bind(String clientId, Session session) {
+        Session existSession = SESSION_MAP.get(clientId);
+        if (existSession != null && !existSession.getSessionId().equals(session.getSessionId())){
+            unbind(clientId);
+
+            NettyUtil.setDisconnectReason(existSession.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
+            existSession.getChannelHandlerContext().disconnect();
+        }
+
         NettyUtil.setClientId(session.getChannelHandlerContext(), clientId);
         SESSION_MAP.put(clientId, session);
     }
