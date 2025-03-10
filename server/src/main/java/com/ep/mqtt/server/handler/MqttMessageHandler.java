@@ -87,7 +87,7 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
             return;
         }
 
-        SessionManager.unbind(clientId);
+        SessionManager.unbind(clientId, sessionId);
 
         commonDeal.afterDisconnect(disconnectReason, session);
     }

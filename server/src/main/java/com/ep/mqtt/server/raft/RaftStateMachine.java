@@ -149,8 +149,6 @@ public class RaftStateMachine extends BaseStateMachine {
 
                 Session existSession = SessionManager.get(checkRepeatSession.getClientId());
                 if (existSession != null && !existSession.getSessionId().equals(checkRepeatSession.getSessionId())) {
-                    SessionManager.unbind(checkRepeatSession.getClientId());
-
                     NettyUtil.setDisconnectReason(existSession.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
                     existSession.getChannelHandlerContext().disconnect();
                 }
