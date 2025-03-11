@@ -24,9 +24,6 @@ public class SqliteDb extends AbstractDb {
 
         // 开启wal
         jdbcTemplate.execute("PRAGMA journal_mode=WAL;");
-
-        // 完全同步，确保每次写入操作都被持久化
-        jdbcTemplate.execute("PRAGMA synchronous=FULL;");
     }
 
     @Override
