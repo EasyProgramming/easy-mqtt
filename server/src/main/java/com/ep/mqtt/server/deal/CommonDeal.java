@@ -49,11 +49,6 @@ public class CommonDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public void afterDisconnect(DisconnectReason disconnectReason, Session session){
-        // 理论上不存在
-        if (disconnectReason == null){
-            return;
-        }
-
         if (!DisconnectReason.REPEAT_CONNECT.equals(disconnectReason)){
             if (session!= null && session.getIsCleanSession()){
                 clearClientData(session.getClientId());
