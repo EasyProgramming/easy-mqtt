@@ -29,8 +29,6 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessage> {
 
-    private static final int MIN_KEEP_ALIVE_TIME_SECONDS = 30;
-
     @Override
     public void process(ChannelHandlerContext channelHandlerContext, MqttConnectMessage mqttConnectMessage) {
         try {
@@ -111,9 +109,6 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
 
     private int keepAlive(ChannelHandlerContext channelHandlerContext, MqttConnectMessage mqttConnectMessage) {
         int keepAliveTimeSeconds = mqttConnectMessage.variableHeader().keepAliveTimeSeconds();
-        if (keepAliveTimeSeconds <= MIN_KEEP_ALIVE_TIME_SECONDS) {
-            keepAliveTimeSeconds = MIN_KEEP_ALIVE_TIME_SECONDS;
-        }
         channelHandlerContext.pipeline().addFirst("idle",
             new IdleStateHandler(0, 0, (int)(keepAliveTimeSeconds * 1.5f)));
         return keepAliveTimeSeconds;
