@@ -52,7 +52,7 @@ public interface ClientSubscribeDao extends BaseMapper<ClientSubscribeDto> {
      * @return 指定topic filter下的客户端
      */
     default List<ClientSubscribeDto> selectByCursor(Set<String> topicFilterSet, Long cursor, Integer pageSize){
-        return selectList(Wrappers.lambdaQuery(ClientSubscribeDto.class).in(ClientSubscribeDto::getTopicFilter, topicFilterSet).le(ClientSubscribeDto::getId,
+        return selectList(Wrappers.lambdaQuery(ClientSubscribeDto.class).in(ClientSubscribeDto::getTopicFilter, topicFilterSet).ge(ClientSubscribeDto::getId,
                 cursor).orderByAsc(ClientSubscribeDto::getId).last(" limit " + pageSize));
     }
 }
