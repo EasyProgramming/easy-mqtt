@@ -1,19 +1,5 @@
 package com.ep.mqtt.server.job;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import javax.annotation.Resource;
-
-import org.apache.commons.lang3.time.DateUtils;
-import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-
 import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
 import com.ep.mqtt.server.db.dao.AsyncJobDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
@@ -24,8 +10,19 @@ import com.ep.mqtt.server.metadata.Constant;
 import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.TransactionUtil;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.DateUtils;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author zbz
@@ -50,16 +47,44 @@ public class AsyncJobEngine {
     @Resource
     private AsyncJobManage asyncJobManage;
 
-    private final Map<AsyncJobBusinessType, AbstractJobProcessor<Object>> processorMap;
+    private final Map<AsyncJobBusinessType, AbstractJobProcessor<?>> processorMap;
 
-    public AsyncJobEngine(List<AbstractJobProcessor<Object>> abstractJobProcessorList){
+    public AsyncJobEngine(List<AbstractJobProcessor<?>> abstractJobProcessorList){
+        processorMap = abstractJobProcessorList.stream().collect(Collectors.toMap(AbstractJobProcessor::getBusinessType, b -> b));
+    }
+
+    public void start(){
+        long start = System.currentTimeMillis();
+        log.info("start async job engine");
+
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryJobRunnable(), 60, 100, TimeUnit.MILLISECONDS);
 
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryTimeoutJobRunnable(), 1, 1, TimeUnit.DAYS);
 
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new CleanJobRunnable(), 1, 1, TimeUnit.DAYS);
 
-        processorMap = abstractJobProcessorList.stream().collect(Collectors.toMap(AbstractJobProcessor::getBusinessType, b -> b));
+        log.info("complete start async job engine, cost [{}ms]", System.currentTimeMillis() - start);
+    }
+
+    public void stop(){
+        long start = System.currentTimeMillis();
+        log.info("stop async job engine");
+
+        QUERY_THREAD_POOL.shutdown();
+
+        QUERY_THREAD_POOL.shutdown();
+
+        QUERY_THREAD_POOL.shutdown();
+
+        for (AbstractJobProcessor<?> abstractJobProcessor : processorMap.values()){
+            if (abstractJobProcessor.getThreadPool().isShutdown()){
+                continue;
+            }
+
+            abstractJobProcessor.getThreadPool().shutdown();
+        }
+
+        log.info("complete stop async job engine, cost [{}ms]", System.currentTimeMillis() - start);
     }
 
     public class QueryJobRunnable implements Runnable {
@@ -80,7 +105,8 @@ public class AsyncJobEngine {
                         continue;
                     }
 
-                    AbstractJobProcessor<Object> jobProcessor = processorMap.get(pendingJob.getBusinessType());
+                    AbstractJobProcessor<Object> jobProcessor = (AbstractJobProcessor<Object>)processorMap.get(pendingJob.getBusinessType());
+
                     if (jobProcessor == null) {
                         asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.FINISH, pendingJob.getExecuteNum() + 1,
                             AsyncJobExecuteResult.FAIL, "未找到对应的processor", null);
@@ -131,7 +157,7 @@ public class AsyncJobEngine {
                                 if (!AsyncJobExecuteResult.SUCCESS.equals(executeResult)) {
                                     if (jobProcessor.getMaxRetryNum() == null || jobProcessor.getMaxRetryNum() > asyncJobDto.getExecuteNum()) {
                                         jobStatus = AsyncJobStatus.READY;
-                                        expectExecuteTime = asyncJobDto.getExpectExecuteTime() + jobProcessor.getRetryInterval() * 1000L;
+                                        expectExecuteTime = System.currentTimeMillis() + jobProcessor.getRetryInterval() * 1000L;
                                     }
                                 }
 

@@ -10,9 +10,6 @@ import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -26,15 +23,17 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
+public class EasyMqttRaftServeSwitch {
 
     private EasyMqttRaftServer easyMqttRaftServer;
 
     @Resource
     private MqttServerProperties mqttServerProperties;
 
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
+    public void start() throws Exception {
+        long start = System.currentTimeMillis();
+        log.info("start raft server");
+
         String[] nodeAddresses = StringUtils.split(mqttServerProperties.getNodeAddress(), Constant.ENGLISH_COMMA);
 
         Map<String, RaftPeer> allPeerMap = getAllPeerList(nodeAddresses);
@@ -50,12 +49,18 @@ public class EasyMqttServeSwitch implements ApplicationRunner, DisposableBean {
         easyMqttRaftServer = new EasyMqttRaftServer(currentPeer, storageDir, raftGroup);
         easyMqttRaftServer.start();
         EasyMqttRaftClient.init(raftGroup);
+
+        log.info("complete start raft server, cost [{}ms]", System.currentTimeMillis() - start);
     }
 
-    @Override
-    public void destroy() throws Exception {
+    public void stop() throws Exception {
+        long start = System.currentTimeMillis();
+        log.info("stop raft server");
+
         easyMqttRaftServer.close();
         EasyMqttRaftClient.close();
+
+        log.info("complete stop raft server, cost [{}ms]", System.currentTimeMillis() - start);
     }
 
     private Map<String, RaftPeer> getAllPeerList(String[] nodeAddresses) {

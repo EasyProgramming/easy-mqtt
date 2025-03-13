@@ -30,8 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import java.io.FileInputStream;
@@ -65,17 +63,18 @@ public class MqttServer {
 
     private Channel websocketChannel;
 
-    @PostConstruct
     public void start() throws Exception {
-        log.info("init mqtt server");
+        long start = System.currentTimeMillis();
+        log.info("start mqtt server");
+
         bossGroup = mqttServerProperties.getIsUseEpoll() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
         workerGroup = mqttServerProperties.getIsUseEpoll() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
         if (mqttServerProperties.getSsl() != null) {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             try (FileInputStream sslCertificateFileInputStream =
-                new FileInputStream(mqttServerProperties.getSsl().getSslCertificatePath())) {
+                         new FileInputStream(mqttServerProperties.getSsl().getSslCertificatePath())) {
                 keyStore.load(sslCertificateFileInputStream,
-                    mqttServerProperties.getSsl().getSslCertificatePassword().toCharArray());
+                        mqttServerProperties.getSsl().getSslCertificatePassword().toCharArray());
             }
             KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
             kmf.init(keyStore, mqttServerProperties.getSsl().getSslCertificatePassword().toCharArray());
@@ -83,12 +82,14 @@ public class MqttServer {
         }
         tcpServer();
         websocketServer();
-        log.info("start mqtt server, time:[{}]", System.currentTimeMillis());
+
+        log.info("complete start mqtt server, cost [{}ms]", System.currentTimeMillis() - start);
     }
 
-    @PreDestroy
     public void stop() {
-        log.info("shutdown mqtt server, time:[{}]", System.currentTimeMillis());
+        long start = System.currentTimeMillis();
+        log.info("stop mqtt server");
+
         bossGroup.shutdownGracefully();
         bossGroup = null;
         workerGroup.shutdownGracefully();
@@ -97,7 +98,8 @@ public class MqttServer {
         tcpChannel = null;
         websocketChannel.closeFuture().syncUninterruptibly();
         websocketChannel = null;
-        log.info("finish shutdown mqtt server, time:[{}]", System.currentTimeMillis());
+
+        log.info("complete stop mqtt server, cost time:[{}ms]", System.currentTimeMillis() - start);
     }
 
     private void tcpServer() throws Exception {
