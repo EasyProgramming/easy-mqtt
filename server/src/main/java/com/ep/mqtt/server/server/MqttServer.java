@@ -96,8 +96,11 @@ public class MqttServer {
         workerGroup = null;
         tcpChannel.closeFuture().syncUninterruptibly();
         tcpChannel = null;
-        websocketChannel.closeFuture().syncUninterruptibly();
-        websocketChannel = null;
+
+        if (websocketChannel != null){
+            websocketChannel.closeFuture().syncUninterruptibly();
+            websocketChannel = null;
+        }
 
         log.info("complete stop mqtt server, cost time:[{}ms]", System.currentTimeMillis() - start);
     }
