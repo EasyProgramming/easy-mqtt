@@ -21,7 +21,7 @@ public enum AsyncJobStatus implements BaseEnum<String> {
     /**
      * 完成
      */
-    FINISH("SUCCESS", "完成"),
+    FINISH("FINISH", "完成"),
 
     ;
 
