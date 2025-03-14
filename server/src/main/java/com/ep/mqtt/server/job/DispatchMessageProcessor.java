@@ -54,12 +54,10 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
 
         // 根据topic filter及id游标查询匹配的客户端，并计算qos
         Map<String, Qos> clientQosMap = Maps.newHashMap();
-        List<ClientSubscribeDto> clientSubscribePage;
         Long cursor = 0L;
         int pageSize = 50000;
-        do {
-            clientSubscribePage = subscribeDao.selectByCursor(Sets.newHashSet(matchTopicFilterList), cursor, pageSize);
-            cursor = clientSubscribePage.get(clientSubscribePage.size() - 1).getId();
+        while (true){
+            List<ClientSubscribeDto> clientSubscribePage = subscribeDao.selectByCursor(Sets.newHashSet(matchTopicFilterList), cursor, pageSize);
 
             for (ClientSubscribeDto clientSubscribe : clientSubscribePage){
                 Qos existQos = clientQosMap.get(clientSubscribe.getClientId());
@@ -75,7 +73,13 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
 
                 clientQosMap.put(clientSubscribe.getClientId(), clientSubscribe.getQos());
             }
-        }while (clientSubscribePage.size() >= pageSize);
+
+            if (CollectionUtils.isEmpty(clientSubscribePage) || clientSubscribePage.size() < pageSize){
+                break;
+            }
+
+            cursor = clientSubscribePage.get(clientSubscribePage.size() - 1).getId();
+        }
 
         if (CollectionUtils.isEmpty(clientQosMap)){
             return AsyncJobExecuteResult.SUCCESS;
