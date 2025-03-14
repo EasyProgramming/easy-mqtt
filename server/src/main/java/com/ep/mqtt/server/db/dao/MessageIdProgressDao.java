@@ -3,6 +3,7 @@ package com.ep.mqtt.server.db.dao;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ep.mqtt.server.db.dto.MessageIdProgressDto;
+import org.apache.ibatis.annotations.Param;
 
 /**
  * @author zbz
@@ -27,7 +28,7 @@ public interface MessageIdProgressDao extends BaseMapper<MessageIdProgressDto> {
      * 进度自增
      * @param clientId 客户端id
      */
-    void incr(String clientId);
+    void incr(@Param("clientId") String clientId);
 
     /**
      * 根据客户端id删除

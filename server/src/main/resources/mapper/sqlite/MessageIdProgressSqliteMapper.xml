@@ -4,9 +4,9 @@
 
     <update id="incr">
         update message_id_progress
-        set progress = progress + 1;
+        set progress = progress + 1
         <where>
-            client_id = #{clientId,jdbcType=VARCHAR}
+            client_id = #{clientId}
         </where>
     </update>
 
