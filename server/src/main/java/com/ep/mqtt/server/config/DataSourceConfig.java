@@ -35,7 +35,7 @@ public class DataSourceConfig {
         switch (runMode){
             case STANDALONE:
                 hikariDataSource = new HikariDataSource();
-                hikariDataSource.setJdbcUrl("jdbc:sqlite:" + Constant.PROJECT_BASE_DIR + "/easy-mqtt.db");
+                hikariDataSource.setJdbcUrl("jdbc:sqlite:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt.db");
                 hikariDataSource.setDriverClassName(DriverClass.SQLITE.getCode());
                 break;
             case CLUSTER:
