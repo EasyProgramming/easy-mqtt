@@ -84,7 +84,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
                 new TransferData(RaftCommand.CLEAN_EXIST_SESSION, JsonUtil.obj2String(checkRepeatSession))));
 
-            sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, !isCleanSession, false);
+            sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, isRetrySendMessage, false);
             log.info("client session id: [{}], client id: [{}] connect", session.getSessionId(), session.getClientId());
         } catch (Throwable throwable) {
             log.error("mqtt connect message process error", throwable);
