@@ -18,13 +18,14 @@ import java.util.UUID;
 public class ModelUtil {
 
     public static DispatchMessageParam buildDispatchMessageParam(Qos receiveQos, String topic, Integer receivePacketId, String fromClientId,
-                                                                 String payload){
+                                                                 String payload, YesOrNo isRetain){
         DispatchMessageParam dispatchMessageParam = new DispatchMessageParam();
         dispatchMessageParam.setReceiveQos(receiveQos);
         dispatchMessageParam.setTopic(topic);
         dispatchMessageParam.setReceivePacketId(receivePacketId);
         dispatchMessageParam.setFromClientId(fromClientId);
         dispatchMessageParam.setPayload(payload);
+        dispatchMessageParam.setIsRetain(isRetain);
 
         return dispatchMessageParam;
     }

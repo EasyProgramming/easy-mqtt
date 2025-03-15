@@ -299,12 +299,12 @@ public class InboundDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public void publish(ChannelHandlerContext channelHandlerContext, Qos receiveQos, String topic, Integer receivePacketId, String fromClientId,
-        String payload, boolean isRetain) {
+        String payload, YesOrNo isRetain) {
         if (receiveQos == null) {
             return;
         }
 
-        if (isRetain){
+        if (isRetain.getBoolean()){
             if (StringUtils.isBlank(payload)){
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
                     @Override
@@ -346,6 +346,7 @@ public class InboundDeal {
                 receiveQos2MessageDto.setFromClientId(fromClientId);
                 receiveQos2MessageDto.setPayload(payload);
                 receiveQos2MessageDto.setReceiveTime(now.getTime());
+                receiveQos2MessageDto.setIsRetain(isRetain);
 
                 receiveQos2MessageDao.insert(receiveQos2MessageDto);
             } catch (DuplicateKeyException e) {
@@ -357,8 +358,8 @@ public class InboundDeal {
         }
 
         asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
-            AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload),
-                now);
+            AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload,
+                        isRetain), now);
 
         if (Qos.LEVEL_0 == receiveQos) {
             return;
@@ -375,7 +376,8 @@ public class InboundDeal {
                 asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
                     AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos2MessageDto.getReceiveQos(),
                                 receiveQos2MessageDto.getTopic(), receiveQos2MessageDto.getReceivePacketId(),
-                                receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload()), new Date());
+                                receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload(), receiveQos2MessageDto.getIsRetain()),
+                        new Date());
             }
         }
 

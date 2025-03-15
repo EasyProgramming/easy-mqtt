@@ -4,6 +4,7 @@ import com.ep.mqtt.server.db.dao.*;
 import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.DisconnectReason;
+import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.util.ModelUtil;
 import org.springframework.stereotype.Component;
@@ -64,7 +65,8 @@ public class CommonDeal {
                             session.getWillMessage().getTopic(),
                             -1,
                             session.getClientId(),
-                            session.getWillMessage().getPayload()
+                            session.getWillMessage().getPayload(),
+                            session.getWillMessage().getIsRetain() ? YesOrNo.YES : YesOrNo.NO
                     ),
                     new Date());
         }

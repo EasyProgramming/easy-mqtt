@@ -68,6 +68,7 @@ CREATE TABLE "receive_qos2_message"
     "from_client_id"    text    NOT NULL,
     "payload"           text    NOT NULL,
     "receive_time"      integer NOT NULL,
+    "is_retain"         text    NOT NULL,
     PRIMARY KEY ("id")
 );
 

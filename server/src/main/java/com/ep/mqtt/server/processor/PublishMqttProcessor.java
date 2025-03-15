@@ -2,6 +2,7 @@ package com.ep.mqtt.server.processor;
 
 import com.ep.mqtt.server.metadata.BaseEnum;
 import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.util.NettyUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -28,7 +29,7 @@ public class PublishMqttProcessor extends AbstractMqttProcessor<MqttPublishMessa
 
         inboundDeal.publish(channelHandlerContext, BaseEnum.getByCode(mqttPublishMessage.fixedHeader().qosLevel().value(), Qos.class),
             mqttPublishMessage.variableHeader().topicName(), mqttPublishMessage.variableHeader().packetId(),
-            NettyUtil.getClientId(channelHandlerContext), dataStr, mqttPublishMessage.fixedHeader().isRetain());
+            NettyUtil.getClientId(channelHandlerContext), dataStr, mqttPublishMessage.fixedHeader().isRetain() ? YesOrNo.YES : YesOrNo.NO);
     }
 
     @Override

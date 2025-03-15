@@ -101,7 +101,7 @@ public class DispatchMessageProcessor extends AbstractJobProcessor<DispatchMessa
                     jobParam.getPayload(),
                     YesOrNo.NO,
                     validTime,
-                    YesOrNo.NO
+                    jobParam.getIsRetain()
             );
 
             if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {

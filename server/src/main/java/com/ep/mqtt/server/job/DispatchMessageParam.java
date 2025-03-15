@@ -1,7 +1,7 @@
 package com.ep.mqtt.server.job;
 
 import com.ep.mqtt.server.metadata.Qos;
-
+import com.ep.mqtt.server.metadata.YesOrNo;
 import lombok.Data;
 
 /**
@@ -20,5 +20,7 @@ public class DispatchMessageParam {
     private String fromClientId;
 
     private String payload;
+
+    private YesOrNo isRetain;
 
 }
