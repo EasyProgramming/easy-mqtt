@@ -14,6 +14,8 @@ public class SessionManager {
 
     private static final Map<String, Session> SESSION_MAP = Maps.newConcurrentMap();
 
+    private static final Map<String, Session> SESSION_MAP_2 = Maps.newConcurrentMap();
+
     public static void bind(String clientId, Session session) {
         synchronized (clientId.intern()){
             Session existSession = SESSION_MAP.get(clientId);
@@ -25,11 +27,18 @@ public class SessionManager {
 
             NettyUtil.setClientId(session.getChannelHandlerContext(), clientId);
             SESSION_MAP.put(clientId, session);
+
+            if (SESSION_MAP_2.get(session.getSessionId()) != null){
+                throw new RuntimeException(String.format("repeat session id [%s]", session.getSessionId()));
+            }
+            SESSION_MAP_2.put(session.getSessionId(), session);
         }
     }
 
     public static void unbind(String clientId, String sessionId) {
         synchronized (clientId.intern()){
+            SESSION_MAP_2.remove(sessionId);
+
             Session existSession = SESSION_MAP.get(clientId);
             if (existSession == null){
                 return;
@@ -47,4 +56,7 @@ public class SessionManager {
         return SESSION_MAP.get(clientId);
     }
 
+    public static Session getBySessionId(String sessionId) {
+        return SESSION_MAP_2.get(sessionId);
+    }
 }

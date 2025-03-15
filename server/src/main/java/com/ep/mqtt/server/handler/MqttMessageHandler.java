@@ -80,7 +80,7 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         String sessionId = NettyUtil.getSessionId(ctx);
         String clientId = NettyUtil.getClientId(ctx);
         DisconnectReason disconnectReason = NettyUtil.getDisconnectReason(ctx);
-        Session session = SessionManager.get(clientId);
+        Session session = SessionManager.getBySessionId(sessionId);
 
         log.info("client session id: [{}], client id: [{}], clear data reason[{}] inactive", sessionId, clientId, disconnectReason);
         if (StringUtils.isBlank(clientId)) {
