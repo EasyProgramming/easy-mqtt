@@ -1,6 +1,6 @@
 package com.ep.mqtt.server.job;
 
-import com.ep.mqtt.server.db.dao.sqlite.AsyncJobSqliteDao;
+import com.ep.mqtt.server.db.dao.AsyncJobDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
@@ -22,7 +22,7 @@ import java.util.List;
 public class AsyncJobManage {
 
     @Resource
-    private AsyncJobSqliteDao asyncJobDao;
+    private AsyncJobDao asyncJobDao;
 
     /**
      * 新增异步任务
