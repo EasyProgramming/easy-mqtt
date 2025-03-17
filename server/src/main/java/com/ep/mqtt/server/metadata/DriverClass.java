@@ -13,7 +13,12 @@ public enum DriverClass implements BaseEnum<String> {
     /**
      * mysql的驱动
      */
-    MYSQL("com.mysql.cj.jdbc.Driver", "mysql的驱动", "mysql")
+    MYSQL("com.mysql.cj.jdbc.Driver", "mysql的驱动", "mysql"),
+
+    /**
+     * h2的驱动
+     */
+    H2("org.h2.Driver", "h2的驱动", "h2"),
     ;
 
     private final String code;

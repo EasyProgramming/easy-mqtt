@@ -41,10 +41,16 @@ public class InitDbConfig {
         throw new RuntimeException(String.format("缺失该驱动[%s]的实现类", dataSource.getDriverClassName()));
     }
 
+//    @ConditionalOnProperty(prefix = "mqtt.server", value = "run-mode", havingValue = "standalone")
+//    @Configuration
+//    @MapperScan(value = {"com.ep.mqtt.server.db.dao.sqlite"})
+//    public static class SqliteMapperScan {
+//    }
+
     @ConditionalOnProperty(prefix = "mqtt.server", value = "run-mode", havingValue = "standalone")
     @Configuration
-    @MapperScan(value = {"com.ep.mqtt.server.db.dao.sqlite"})
-    public static class SqliteMapperScan {
+    @MapperScan(value = {"com.ep.mqtt.server.db.dao.h2"})
+    public static class H2MapperScan {
     }
 
     @ConditionalOnProperty(prefix = "mqtt.server", value = "run-mode", havingValue = "cluster")

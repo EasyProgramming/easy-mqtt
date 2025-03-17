@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.Resource;
-import java.io.File;
 
 /**
  * @author zbz
@@ -35,12 +34,16 @@ public class DataSourceConfig {
         HikariDataSource hikariDataSource;
         switch (runMode){
             case STANDALONE:
-                File storageDir = new File(Constant.PROJECT_BASE_DIR + "/database");
-                storageDir.mkdirs();
+//                File storageDir = new File(Constant.PROJECT_BASE_DIR + "/database");
+//                storageDir.mkdirs();
+//
+//                hikariDataSource = new HikariDataSource();
+//                hikariDataSource.setJdbcUrl("jdbc:sqlite:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt.db");
+//                hikariDataSource.setDriverClassName(DriverClass.SQLITE.getCode());
 
                 hikariDataSource = new HikariDataSource();
-                hikariDataSource.setJdbcUrl("jdbc:sqlite:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt.db");
-                hikariDataSource.setDriverClassName(DriverClass.SQLITE.getCode());
+                hikariDataSource.setJdbcUrl("jdbc:h2:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt");
+                hikariDataSource.setDriverClassName(DriverClass.H2.getCode());
                 break;
             case CLUSTER:
                 hikariDataSource = new HikariDataSource();
