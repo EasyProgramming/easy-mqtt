@@ -94,7 +94,7 @@ public class MqttServerProperties {
         /**
          * websocket端口
          */
-        private Integer websocketPort = 8082;
+        private Integer websocketPort = 8083;
 
         /**
          * websocket连接地址
