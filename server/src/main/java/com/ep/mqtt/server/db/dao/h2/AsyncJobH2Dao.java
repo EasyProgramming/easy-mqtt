@@ -19,10 +19,7 @@ public interface AsyncJobH2Dao extends AsyncJobDao {
      */
     @Override
     default AsyncJobDto lock(String businessId) {
-        update(Wrappers.lambdaUpdate(AsyncJobDto.class).set(AsyncJobDto::getBusinessId, businessId)
-            .eq(AsyncJobDto::getBusinessId, businessId));
-
-        return selectOne(Wrappers.lambdaUpdate(AsyncJobDto.class).eq(AsyncJobDto::getBusinessId, businessId));
+        return selectOne(Wrappers.lambdaUpdate(AsyncJobDto.class).eq(AsyncJobDto::getBusinessId, businessId).last("for update"));
     }
 
 }
