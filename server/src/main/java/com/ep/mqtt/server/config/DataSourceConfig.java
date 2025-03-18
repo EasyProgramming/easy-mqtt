@@ -34,13 +34,6 @@ public class DataSourceConfig {
         HikariDataSource hikariDataSource;
         switch (runMode){
             case STANDALONE:
-//                File storageDir = new File(Constant.PROJECT_BASE_DIR + "/database");
-//                storageDir.mkdirs();
-//
-//                hikariDataSource = new HikariDataSource();
-//                hikariDataSource.setJdbcUrl("jdbc:sqlite:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt.db");
-//                hikariDataSource.setDriverClassName(DriverClass.SQLITE.getCode());
-
                 hikariDataSource = new HikariDataSource();
                 hikariDataSource.setJdbcUrl("jdbc:h2:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt");
                 hikariDataSource.setDriverClassName(DriverClass.H2.getCode());
