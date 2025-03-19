@@ -1,6 +1,7 @@
 package com.ep.mqtt.server.store;
 
 import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.util.ReadWriteLockUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -14,30 +15,28 @@ import java.util.*;
 @Slf4j
 public class TopicFilterStore {
 
-    private static final String LOCK_KEY = "TopicFilterStore";
+    private final static ReadWriteLockUtil LOCK = new ReadWriteLockUtil();
 
     private static final Set<String> TOPIC_FILTER_SET = new HashSet<>();
 
     private static final TopicFilterTree TOPIC_FILTER_TREE = new TopicFilterTree();
 
     public static List<String> matchTopicFilter(String topicName) {
-        synchronized (LOCK_KEY){
-            return TOPIC_FILTER_TREE.getMatchingFilters(topicName);
-        }
+        return LOCK.readLock(()-> TOPIC_FILTER_TREE.getMatchingFilters(topicName));
     }
 
     public static void add(String topicFilter) {
-        synchronized (LOCK_KEY){
+        LOCK.writeLock(()->{
             TOPIC_FILTER_TREE.insert(topicFilter);
             TOPIC_FILTER_SET.add(topicFilter);
-        }
+        });
     }
 
     public static void remove(String topicFilter) {
-        synchronized (LOCK_KEY){
+        LOCK.writeLock(()->{
             TOPIC_FILTER_TREE.delete(topicFilter);
             TOPIC_FILTER_SET.remove(topicFilter);
-        }
+        });
     }
 
     public static Set<String> getTopicFilterSet() {
