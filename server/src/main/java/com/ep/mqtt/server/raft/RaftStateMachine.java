@@ -115,7 +115,46 @@ public class RaftStateMachine extends BaseStateMachine {
     @Override
     public CompletableFuture<Message> query(Message request) {
         final String command = request.getContent().toString(Charset.defaultCharset());
-        // TODO: 2025/3/24 这里执行发送消息的操作
+        TransferData transferData = TransferData.convert(command);
+        if (transferData == null){
+            return CompletableFuture.completedFuture(Message.EMPTY);
+        }
+
+        switch (transferData.getCommand()) {
+            case SEND_MESSAGE: {
+                SendMessage sendMessage =
+                        JsonUtil.string2Obj(transferData.getData(), SendMessage.class);
+                if (sendMessage == null) {
+                    break;
+                }
+
+                Session session = SessionManager.get(sendMessage.getToClientId());
+                if (session != null){
+                    MqttUtil.sendPublish(session.getChannelHandlerContext(), sendMessage.getIsDup(), sendMessage.getSendQos(), sendMessage.getIsRetain(),
+                            sendMessage.getTopic(), sendMessage.getSendPacketId(), sendMessage.getPayload());
+                }
+
+                break;
+            }
+
+            case CLEAN_EXIST_SESSION: {
+                CheckRepeatSession checkRepeatSession =
+                        JsonUtil.string2Obj(transferData.getData(), CheckRepeatSession.class);
+                if (checkRepeatSession == null) {
+                    break;
+                }
+
+                Session existSession = SessionManager.get(checkRepeatSession.getClientId());
+                if (existSession != null && !existSession.getSessionId().equals(checkRepeatSession.getSessionId())) {
+                    NettyUtil.setDisconnectReason(existSession.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
+                    existSession.getChannelHandlerContext().disconnect();
+                }
+
+                break;
+            }
+
+            default:
+        }
 
         return CompletableFuture.completedFuture(Message.EMPTY);
     }
@@ -147,35 +186,6 @@ public class RaftStateMachine extends BaseStateMachine {
             case REMOVE_TOPIC_FILTER: {
                 // TODO: 2025/2/27 待实现删除topic filter的逻辑
                 TopicFilterStore.remove(null);
-                break;
-            }
-            case CLEAN_EXIST_SESSION: {
-                CheckRepeatSession checkRepeatSession =
-                        JsonUtil.string2Obj(transferData.getData(), CheckRepeatSession.class);
-                if (checkRepeatSession == null) {
-                    break;
-                }
-
-                Session existSession = SessionManager.get(checkRepeatSession.getClientId());
-                if (existSession != null && !existSession.getSessionId().equals(checkRepeatSession.getSessionId())) {
-                    NettyUtil.setDisconnectReason(existSession.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
-                    existSession.getChannelHandlerContext().disconnect();
-                }
-                break;
-            }
-            case SEND_MESSAGE: {
-                SendMessage sendMessage =
-                        JsonUtil.string2Obj(transferData.getData(), SendMessage.class);
-                if (sendMessage == null) {
-                    break;
-                }
-
-                Session session = SessionManager.get(sendMessage.getToClientId());
-                if (session != null){
-                    MqttUtil.sendPublish(session.getChannelHandlerContext(), sendMessage.getIsDup(), sendMessage.getSendQos(), sendMessage.getIsRetain(),
-                        sendMessage.getTopic(), sendMessage.getSendPacketId(), sendMessage.getPayload());
-                }
-
                 break;
             }
             case ADD_RETAIN_MESSAGE: {

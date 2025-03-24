@@ -61,14 +61,14 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
 
         if (jobParam.getSendQos() == Qos.LEVEL_0) {
             stopWatch.start("发送raft消息-qos0");
-            EasyMqttRaftClient.asyncSendReadOnly(JsonUtil.obj2String(
+            EasyMqttRaftClient.broadcast(JsonUtil.obj2String(
                     new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
             stopWatch.stop();
         }
         else {
             if (sendMessageDao.updateSendPacketId(jobParam.getSendMessageId(), messageId)) {
                 stopWatch.start("发送raft消息-qos12");
-                EasyMqttRaftClient.asyncSendReadOnly(JsonUtil.obj2String(new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
+                EasyMqttRaftClient.broadcast(JsonUtil.obj2String(new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
                 stopWatch.stop();
             }
         }

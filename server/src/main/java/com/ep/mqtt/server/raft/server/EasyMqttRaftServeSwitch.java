@@ -25,6 +25,8 @@ import java.util.Map;
 @Component
 public class EasyMqttRaftServeSwitch {
 
+    public static RaftGroupId RAFT_GROUP_ID = RaftGroupId.valueOf(ByteString.copyFrom("easy-mqtt-000000", StandardCharsets.UTF_8));
+
     private EasyMqttRaftServer easyMqttRaftServer;
 
     @Resource
@@ -39,7 +41,7 @@ public class EasyMqttRaftServeSwitch {
         Map<String, RaftPeer> allPeerMap = getAllPeerList(nodeAddresses);
 
         RaftGroup raftGroup =
-            RaftGroup.valueOf(RaftGroupId.valueOf(ByteString.copyFrom("easy-mqtt-000000", StandardCharsets.UTF_8)), allPeerMap.values());
+            RaftGroup.valueOf(RAFT_GROUP_ID, allPeerMap.values());
 
         RaftPeer currentPeer = allPeerMap.get(getId(nodeAddresses[0]));
 

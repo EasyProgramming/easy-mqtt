@@ -81,7 +81,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             CheckRepeatSession checkRepeatSession = new CheckRepeatSession();
             checkRepeatSession.setSessionId(session.getSessionId());
             checkRepeatSession.setClientId(session.getClientId());
-            EasyMqttRaftClient.syncSend(JsonUtil.obj2String(
+            EasyMqttRaftClient.broadcast(JsonUtil.obj2String(
                 new TransferData(RaftCommand.CLEAN_EXIST_SESSION, JsonUtil.obj2String(checkRepeatSession))));
 
             sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, isRetrySendMessage, false);
