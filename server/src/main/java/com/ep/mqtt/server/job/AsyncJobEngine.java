@@ -46,6 +46,8 @@ public class AsyncJobEngine {
     private static final ThreadPoolExecutor OCCUPY_THREAD_POOL =  new ThreadPoolExecutor(10, 10, 60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setNameFormat("async-job-occupy-%s").build());
 
+    private static Long JOB_CURSOR = 0L;
+
     @Resource
     private AsyncJobDao asyncJobDao;
 
@@ -80,9 +82,7 @@ public class AsyncJobEngine {
 
         QUERY_THREAD_POOL.shutdown();
 
-        QUERY_THREAD_POOL.shutdown();
-
-        QUERY_THREAD_POOL.shutdown();
+        OCCUPY_THREAD_POOL.shutdown();
 
         for (AbstractJobProcessor<?> abstractJobProcessor : processorMap.values()){
             if (abstractJobProcessor.getThreadPool().isShutdown()){
@@ -102,10 +102,12 @@ public class AsyncJobEngine {
             try {
                 long jobStart = System.currentTimeMillis();
 
-                List<AsyncJobDto> pendingJobList = asyncJobDao.getPendingJob(2000);
+                List<AsyncJobDto> pendingJobList = asyncJobDao.getPendingJob(2000, JOB_CURSOR);
                 if (CollectionUtils.isEmpty(pendingJobList)) {
                     return;
                 }
+
+                JOB_CURSOR = pendingJobList.get(pendingJobList.size() - 1).getId();
 
                 for (AsyncJobDto pendingJob : pendingJobList) {
                     OCCUPY_THREAD_POOL.submit(()-> occupyJob(pendingJob));
