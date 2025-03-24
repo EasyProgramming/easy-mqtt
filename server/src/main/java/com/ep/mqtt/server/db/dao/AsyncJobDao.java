@@ -1,15 +1,14 @@
 package com.ep.mqtt.server.db.dao;
 
-import java.util.Date;
-import java.util.List;
-
-import org.apache.commons.lang3.time.DateUtils;
-
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
+import org.apache.commons.lang3.time.DateUtils;
+
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author zbz
@@ -39,10 +38,14 @@ public interface AsyncJobDao extends BaseMapper<AsyncJobDto> {
      * @return 是否占用成功
      */
     default Boolean tryOccupyJob(String businessId) {
+        AsyncJobDto asyncJobDto = lock(businessId);
+        if (asyncJobDto == null || !AsyncJobStatus.READY.equals(asyncJobDto.getExecuteStatus())){
+            return false;
+        }
+
         return update(
                 Wrappers.lambdaUpdate(AsyncJobDto.class).set(AsyncJobDto::getLastStartTime, System.currentTimeMillis())
-                        .set(AsyncJobDto::getExecuteStatus, AsyncJobStatus.EXECUTING).eq(AsyncJobDto::getBusinessId, businessId)
-                        .eq(AsyncJobDto::getExecuteStatus, AsyncJobStatus.READY)) > 0;
+                        .set(AsyncJobDto::getExecuteStatus, AsyncJobStatus.EXECUTING).eq(AsyncJobDto::getBusinessId, businessId)) > 0;
     }
 
     /**
