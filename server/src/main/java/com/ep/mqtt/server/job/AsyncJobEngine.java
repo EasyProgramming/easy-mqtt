@@ -20,7 +20,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -37,6 +39,12 @@ public class AsyncJobEngine {
      */
     private static final ScheduledThreadPoolExecutor QUERY_THREAD_POOL =
         new ScheduledThreadPoolExecutor(Constant.PROCESSOR_NUM, new ThreadFactoryBuilder().setNameFormat("async-job-query-%s").build());
+
+    /**
+     * 预占任务的线程池
+     */
+    private static final ThreadPoolExecutor OCCUPY_THREAD_POOL =  new ThreadPoolExecutor(10, 10, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setNameFormat("async-job-occupy-%s").build());
 
     @Resource
     private AsyncJobDao asyncJobDao;
@@ -100,86 +108,103 @@ public class AsyncJobEngine {
                 }
 
                 for (AsyncJobDto pendingJob : pendingJobList) {
-                    Boolean isOccupy = transactionUtil.transaction(() -> asyncJobDao.tryOccupyJob(pendingJob.getBusinessId()));
-                    if (!isOccupy) {
-                        continue;
-                    }
-
-                    AbstractJobProcessor<Object> jobProcessor = (AbstractJobProcessor<Object>)processorMap.get(pendingJob.getBusinessType());
-
-                    if (jobProcessor == null) {
-                        asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.FINISH, pendingJob.getExecuteNum() + 1,
-                            AsyncJobExecuteResult.FAIL, "未找到对应的processor", null);
-                        continue;
-                    }
-
-                    jobProcessor.getThreadPool().submit(() -> {
-                        long start = System.currentTimeMillis();
-
-                        try {
-                            transactionUtil.transaction(() -> {
-                                AsyncJobDto asyncJobDto;
-                                try {
-                                    asyncJobDto = asyncJobDao.lock(pendingJob.getBusinessId());
-                                    if (asyncJobDto == null) {
-                                        return null;
-                                    }
-                                    if (!AsyncJobStatus.EXECUTING.equals(asyncJobDto.getExecuteStatus())) {
-                                        return null;
-                                    }
-                                } catch (Throwable e) {
-                                    log.error("执行异步任务时出现异常:[获取任务失败]", e);
-                                    asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.READY, pendingJob.getExecuteNum(),
-                                            AsyncJobExecuteResult.FAIL, e.getMessage(),
-                                            pendingJob.getExpectExecuteTime() + jobProcessor.getRetryInterval() * 1000L);
-                                    return null;
-                                }
-
-                                AsyncJobExecuteResult executeResult;
-                                String executeResultDesc;
-                                try {
-                                    executeResult = jobProcessor.process(asyncJobDto, JsonUtil.string2Obj(asyncJobDto.getJobParam(),
-                                            ReflectionKit.getSuperClassGenericType(jobProcessor.getClass(), AbstractJobProcessor.class, 0)));
-                                    // null代表成功执行任务
-                                    if (executeResult == null) {
-                                        executeResult = AsyncJobExecuteResult.SUCCESS;
-                                    }
-
-                                    executeResultDesc = "成功";
-                                } catch (Throwable e) {
-                                    log.error("执行异步任务时出现异常:[执行业务逻辑失败]", e);
-                                    executeResult = AsyncJobExecuteResult.FAIL;
-                                    executeResultDesc = e.getMessage();
-                                }
-
-                                AsyncJobStatus jobStatus = AsyncJobStatus.FINISH;
-                                Long expectExecuteTime = null;
-                                if (!AsyncJobExecuteResult.SUCCESS.equals(executeResult)) {
-                                    if (jobProcessor.getMaxRetryNum() == null || jobProcessor.getMaxRetryNum() > asyncJobDto.getExecuteNum()) {
-                                        jobStatus = AsyncJobStatus.READY;
-                                        expectExecuteTime = System.currentTimeMillis() + jobProcessor.getRetryInterval() * 1000L;
-                                    }
-                                }
-
-                                asyncJobDao.finishJob(asyncJobDto.getBusinessId(), jobStatus, asyncJobDto.getExecuteNum() + 1, executeResult,
-                                        executeResultDesc, expectExecuteTime);
-                                return null;
-                            });
-
-                            log.info("处理事件：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
-                                    System.currentTimeMillis() - start);
-                        }
-                        catch (Throwable e){
-                            log.error("处理事件出错：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
-                                    System.currentTimeMillis() - start, e);
-                        }
-                    });
+                    OCCUPY_THREAD_POOL.submit(()-> occupyJob(pendingJob));
                 }
 
                 log.info("获取待执行任务，任务id:{}, 耗时{}ms", id, System.currentTimeMillis() - jobStart);
             } catch (Throwable e) {
                 log.error("获取待执行任务出错，任务id:{}", id, e);
             }
+        }
+    }
+
+    private void occupyJob(AsyncJobDto pendingJob){
+        long start = System.currentTimeMillis();
+
+        try {
+            Boolean isOccupy = transactionUtil.transaction(() -> asyncJobDao.tryOccupyJob(pendingJob.getBusinessId()));
+            if (!isOccupy) {
+                return;
+            }
+
+            AbstractJobProcessor<Object> jobProcessor = (AbstractJobProcessor<Object>)processorMap.get(pendingJob.getBusinessType());
+
+            if (jobProcessor == null) {
+                asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.FINISH, pendingJob.getExecuteNum() + 1,
+                        AsyncJobExecuteResult.FAIL, "未找到对应的processor", null);
+                return;
+            }
+
+            jobProcessor.getThreadPool().submit(() -> executeJob(pendingJob, jobProcessor));
+
+            log.info("预占任务：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
+                    System.currentTimeMillis() - start);
+        }
+        catch (Throwable e){
+            log.error("预占任务出错：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
+                    System.currentTimeMillis() - start, e);
+        }
+    }
+
+    private void executeJob(AsyncJobDto pendingJob, AbstractJobProcessor<Object> jobProcessor){
+        long start = System.currentTimeMillis();
+
+        try {
+            transactionUtil.transaction(() -> {
+                AsyncJobDto asyncJobDto;
+                try {
+                    asyncJobDto = asyncJobDao.lock(pendingJob.getBusinessId());
+                    if (asyncJobDto == null) {
+                        return null;
+                    }
+                    if (!AsyncJobStatus.EXECUTING.equals(asyncJobDto.getExecuteStatus())) {
+                        return null;
+                    }
+                } catch (Throwable e) {
+                    log.error("执行异步任务时出现异常:[获取任务失败]", e);
+                    asyncJobDao.finishJob(pendingJob.getBusinessId(), AsyncJobStatus.READY, pendingJob.getExecuteNum(),
+                            AsyncJobExecuteResult.FAIL, e.getMessage(),
+                            pendingJob.getExpectExecuteTime() + jobProcessor.getRetryInterval() * 1000L);
+                    return null;
+                }
+
+                AsyncJobExecuteResult executeResult;
+                String executeResultDesc;
+                try {
+                    executeResult = jobProcessor.process(asyncJobDto, JsonUtil.string2Obj(asyncJobDto.getJobParam(),
+                            ReflectionKit.getSuperClassGenericType(jobProcessor.getClass(), AbstractJobProcessor.class, 0)));
+                    // null代表成功执行任务
+                    if (executeResult == null) {
+                        executeResult = AsyncJobExecuteResult.SUCCESS;
+                    }
+
+                    executeResultDesc = "成功";
+                } catch (Throwable e) {
+                    log.error("执行异步任务时出现异常:[执行业务逻辑失败]", e);
+                    executeResult = AsyncJobExecuteResult.FAIL;
+                    executeResultDesc = e.getMessage();
+                }
+
+                AsyncJobStatus jobStatus = AsyncJobStatus.FINISH;
+                Long expectExecuteTime = null;
+                if (!AsyncJobExecuteResult.SUCCESS.equals(executeResult)) {
+                    if (jobProcessor.getMaxRetryNum() == null || jobProcessor.getMaxRetryNum() > asyncJobDto.getExecuteNum()) {
+                        jobStatus = AsyncJobStatus.READY;
+                        expectExecuteTime = System.currentTimeMillis() + jobProcessor.getRetryInterval() * 1000L;
+                    }
+                }
+
+                asyncJobDao.finishJob(asyncJobDto.getBusinessId(), jobStatus, asyncJobDto.getExecuteNum() + 1, executeResult,
+                        executeResultDesc, expectExecuteTime);
+                return null;
+            });
+
+            log.info("执行任务：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
+                    System.currentTimeMillis() - start);
+        }
+        catch (Throwable e){
+            log.error("执行任务：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
+                    System.currentTimeMillis() - start, e);
         }
     }
 

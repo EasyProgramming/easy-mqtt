@@ -48,6 +48,8 @@ public class DataSourceConfig {
                 hikariDataSource.setJdbcUrl(mqttServerProperties.getDb().getUrl());
                 hikariDataSource.setUsername(mqttServerProperties.getDb().getUsername());
                 hikariDataSource.setPassword(mqttServerProperties.getDb().getPassword());
+                hikariDataSource.setMaximumPoolSize(Constant.PROCESSOR_NUM * 10);
+                hikariDataSource.setIdleTimeout(Constant.PROCESSOR_NUM * 10);
                 break;
             default:
                 throw new RuntimeException(String.format("暂不支持该运行模式[%s]", mqttServerProperties.getRunMode()));
