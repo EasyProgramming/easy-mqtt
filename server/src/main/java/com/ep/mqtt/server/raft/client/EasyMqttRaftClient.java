@@ -32,4 +32,12 @@ public class EasyMqttRaftClient {
             throw new RuntimeException(e);
         }
     }
+
+    public static void asyncSend(String data) {
+        client.async().send(Message.valueOf(data));
+    }
+
+    public static void asyncSendReadOnly(String data) {
+        client.async().sendReadOnly(Message.valueOf(data));
+    }
 }

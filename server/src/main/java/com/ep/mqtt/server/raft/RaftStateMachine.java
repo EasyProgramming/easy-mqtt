@@ -32,6 +32,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -107,6 +108,14 @@ public class RaftStateMachine extends BaseStateMachine {
     public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
         executeCommand(TransferData.convert(trx.getLogEntry().getStateMachineLogEntry().getLogData().toString(StandardCharsets.UTF_8)),
                 TermIndex.valueOf(trx.getLogEntry()));
+
+        return CompletableFuture.completedFuture(Message.EMPTY);
+    }
+
+    @Override
+    public CompletableFuture<Message> query(Message request) {
+        final String command = request.getContent().toString(Charset.defaultCharset());
+        // TODO: 2025/3/24 这里执行发送消息的操作
 
         return CompletableFuture.completedFuture(Message.EMPTY);
     }
