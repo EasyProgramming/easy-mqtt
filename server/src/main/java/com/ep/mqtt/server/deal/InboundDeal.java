@@ -32,7 +32,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -77,7 +80,7 @@ public class InboundDeal {
     private TransactionUtil transactionUtil;
 
     @Resource
-    private CommonDeal clearClientData;
+    private CommonDeal commonDeal;
 
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
@@ -272,7 +275,7 @@ public class InboundDeal {
         if (isCleanSession) {
             if (existClientDto != null) {
                 // 清除之前的数据
-                clearClientData.clearClientData(clientId);
+                commonDeal.clearClientData(clientId);
             }
 
             saveClientInfo(clientId, true);
@@ -286,7 +289,7 @@ public class InboundDeal {
 
         // 之前有会话，但之前的会话的设置的不持久化数据，所以清理之前的数据
         if (YesOrNo.YES.equals(existClientDto.getIsCleanSession())) {
-            clearClientData.clearClientData(clientId);
+            commonDeal.clearClientData(clientId);
             saveClientInfo(clientId, false);
             return false;
         }
@@ -357,9 +360,11 @@ public class InboundDeal {
             return;
         }
 
-        asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
-            AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload,
-                        isRetain), now);
+        commonDeal.dispatchMessage(ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload,
+                isRetain));
+//        asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
+//            AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload,
+//                        isRetain), now);
 
         if (Qos.LEVEL_0 == receiveQos) {
             return;
@@ -373,11 +378,14 @@ public class InboundDeal {
         ReceiveQos2MessageDto receiveQos2MessageDto = receiveQos2MessageDao.selectByFromClientIdAndReceivePacketId(fromClientId, receivePacketId);
         if (receiveQos2MessageDto != null) {
             if (receiveQos2MessageDao.deleteByFromClientIdAndReceivePacketId(fromClientId, receivePacketId)) {
-                asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
-                    AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos2MessageDto.getReceiveQos(),
-                                receiveQos2MessageDto.getTopic(), receiveQos2MessageDto.getReceivePacketId(),
-                                receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload(), receiveQos2MessageDto.getIsRetain()),
-                        new Date());
+                commonDeal.dispatchMessage(ModelUtil.buildDispatchMessageParam(receiveQos2MessageDto.getReceiveQos(),
+                        receiveQos2MessageDto.getTopic(), receiveQos2MessageDto.getReceivePacketId(),
+                        receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload(), receiveQos2MessageDto.getIsRetain()));
+//                asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
+//                    AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos2MessageDto.getReceiveQos(),
+//                                receiveQos2MessageDto.getTopic(), receiveQos2MessageDto.getReceivePacketId(),
+//                                receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload(), receiveQos2MessageDto.getIsRetain()),
+//                        new Date());
             }
         }
 
