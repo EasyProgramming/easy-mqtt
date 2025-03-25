@@ -1,7 +1,6 @@
-package com.ep.mqtt.server.raft.transfer;
+package com.ep.mqtt.server.rpc.transfer;
 
 import com.ep.mqtt.server.metadata.Qos;
-
 import lombok.Data;
 
 /**

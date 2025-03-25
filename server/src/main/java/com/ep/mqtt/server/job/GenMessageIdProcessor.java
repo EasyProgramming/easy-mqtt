@@ -4,10 +4,8 @@ import com.ep.mqtt.server.db.dao.MessageIdProgressDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.*;
-import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
-import com.ep.mqtt.server.raft.transfer.SendMessage;
-import com.ep.mqtt.server.raft.transfer.TransferData;
-import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.rpc.EasyMqttRpcClient;
+import com.ep.mqtt.server.rpc.transfer.SendMessage;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -60,15 +58,14 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
         sendMessage.setIsRetain(jobParam.getIsRetain().getBoolean());
 
         if (jobParam.getSendQos() == Qos.LEVEL_0) {
-            stopWatch.start("发送raft消息-qos0");
-            EasyMqttRaftClient.broadcast(JsonUtil.obj2String(
-                    new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
+            stopWatch.start("发送rpc消息-qos0");
+            EasyMqttRpcClient.broadcast(RpcCommand.SEND_MESSAGE, sendMessage);
             stopWatch.stop();
         }
         else {
             if (sendMessageDao.updateSendPacketId(jobParam.getSendMessageId(), messageId)) {
-                stopWatch.start("发送raft消息-qos12");
-                EasyMqttRaftClient.broadcast(JsonUtil.obj2String(new TransferData(RaftCommand.SEND_MESSAGE, JsonUtil.obj2String(sendMessage))));
+                stopWatch.start("发送rpc消息-qos12");
+                EasyMqttRpcClient.broadcast(RpcCommand.SEND_MESSAGE, sendMessage);
                 stopWatch.stop();
             }
         }

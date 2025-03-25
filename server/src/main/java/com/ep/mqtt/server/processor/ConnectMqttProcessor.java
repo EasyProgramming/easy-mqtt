@@ -2,13 +2,11 @@ package com.ep.mqtt.server.processor;
 
 import com.ep.mqtt.server.metadata.BaseEnum;
 import com.ep.mqtt.server.metadata.Qos;
-import com.ep.mqtt.server.metadata.RaftCommand;
-import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
-import com.ep.mqtt.server.raft.transfer.CheckRepeatSession;
-import com.ep.mqtt.server.raft.transfer.TransferData;
+import com.ep.mqtt.server.metadata.RpcCommand;
+import com.ep.mqtt.server.rpc.EasyMqttRpcClient;
+import com.ep.mqtt.server.rpc.transfer.CheckRepeatSession;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
-import com.ep.mqtt.server.util.JsonUtil;
 import com.ep.mqtt.server.util.NettyUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -81,8 +79,7 @@ public class ConnectMqttProcessor extends AbstractMqttProcessor<MqttConnectMessa
             CheckRepeatSession checkRepeatSession = new CheckRepeatSession();
             checkRepeatSession.setSessionId(session.getSessionId());
             checkRepeatSession.setClientId(session.getClientId());
-            EasyMqttRaftClient.broadcast(JsonUtil.obj2String(
-                new TransferData(RaftCommand.CLEAN_EXIST_SESSION, JsonUtil.obj2String(checkRepeatSession))));
+            EasyMqttRpcClient.broadcast(RpcCommand.CLEAN_EXIST_SESSION, checkRepeatSession);
 
             sendConnectAck(channelHandlerContext, MqttConnectReturnCode.CONNECTION_ACCEPTED, isRetrySendMessage, false);
             log.info("client session id: [{}], client id: [{}] connect", session.getSessionId(), session.getClientId());

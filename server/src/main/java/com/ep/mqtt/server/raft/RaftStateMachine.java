@@ -1,14 +1,12 @@
 package com.ep.mqtt.server.raft;
 
-import com.ep.mqtt.server.metadata.DisconnectReason;
-import com.ep.mqtt.server.raft.transfer.*;
-import com.ep.mqtt.server.session.Session;
-import com.ep.mqtt.server.session.SessionManager;
+import com.ep.mqtt.server.raft.transfer.AddRetainMessage;
+import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
+import com.ep.mqtt.server.raft.transfer.RemoveRetainMessage;
+import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.store.RetainMessageStore;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.JsonUtil;
-import com.ep.mqtt.server.util.MqttUtil;
-import com.ep.mqtt.server.util.NettyUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -32,7 +30,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -108,53 +105,6 @@ public class RaftStateMachine extends BaseStateMachine {
     public CompletableFuture<Message> applyTransaction(TransactionContext trx) {
         executeCommand(TransferData.convert(trx.getLogEntry().getStateMachineLogEntry().getLogData().toString(StandardCharsets.UTF_8)),
                 TermIndex.valueOf(trx.getLogEntry()));
-
-        return CompletableFuture.completedFuture(Message.EMPTY);
-    }
-
-    @Override
-    public CompletableFuture<Message> query(Message request) {
-        final String command = request.getContent().toString(Charset.defaultCharset());
-        TransferData transferData = TransferData.convert(command);
-        if (transferData == null){
-            return CompletableFuture.completedFuture(Message.EMPTY);
-        }
-
-        switch (transferData.getCommand()) {
-            case SEND_MESSAGE: {
-                SendMessage sendMessage =
-                        JsonUtil.string2Obj(transferData.getData(), SendMessage.class);
-                if (sendMessage == null) {
-                    break;
-                }
-
-                Session session = SessionManager.get(sendMessage.getToClientId());
-                if (session != null){
-                    MqttUtil.sendPublish(session.getChannelHandlerContext(), sendMessage.getIsDup(), sendMessage.getSendQos(), sendMessage.getIsRetain(),
-                            sendMessage.getTopic(), sendMessage.getSendPacketId(), sendMessage.getPayload());
-                }
-
-                break;
-            }
-
-            case CLEAN_EXIST_SESSION: {
-                CheckRepeatSession checkRepeatSession =
-                        JsonUtil.string2Obj(transferData.getData(), CheckRepeatSession.class);
-                if (checkRepeatSession == null) {
-                    break;
-                }
-
-                Session existSession = SessionManager.get(checkRepeatSession.getClientId());
-                if (existSession != null && !existSession.getSessionId().equals(checkRepeatSession.getSessionId())) {
-                    NettyUtil.setDisconnectReason(existSession.getChannelHandlerContext(), DisconnectReason.REPEAT_CONNECT);
-                    existSession.getChannelHandlerContext().disconnect();
-                }
-
-                break;
-            }
-
-            default:
-        }
 
         return CompletableFuture.completedFuture(Message.EMPTY);
     }
