@@ -21,7 +21,10 @@ public class RpcServer {
 
     private Vertx vertx;
 
-    public void start(){
+    public void start(Runnable afterStart){
+        long start = System.currentTimeMillis();
+        log.info("start rpc server");
+
         // 1. 创建Hazelcast配置对象
         Config hazelcastConfig = new Config();
 
@@ -42,14 +45,23 @@ public class RpcServer {
 
         VertxOptions options = new VertxOptions().setClusterManager(clusterManager);
 
-        Vertx.clusteredVertx(options, res -> {
-            if (res.succeeded()) {
-                vertx = res.result();
-
+        Vertx.clusteredVertx(options, clusterResult -> {
+            if (clusterResult.succeeded()) {
+                vertx = clusterResult.result();
                 rpcVerticle = new RpcVerticle();
-                vertx.deployVerticle(rpcVerticle);
+
+                vertx.deployVerticle(rpcVerticle).onComplete((vertxResult)->{
+                    if (vertxResult.succeeded()){
+                        log.info("complete start rpc server, cost [{}ms]", System.currentTimeMillis() - start);
+
+                        afterStart.run();
+                    }
+                    else {
+                        log.error("runner run error", vertxResult.cause());
+                    }
+                });
             } else {
-                log.error("rpc server start error", res.cause());
+                log.error("runner run error", clusterResult.cause());
             }
         });
     }

@@ -34,16 +34,21 @@ public class EasyMqttRunner implements ApplicationRunner, DisposableBean {
     @Override
     public void run(ApplicationArguments args) {
         try {
-            rpcServer.start();
+            rpcServer.start(()->{
+                try {
+                    easyMqttRaftServeSwitch.start();
 
-            easyMqttRaftServeSwitch.start();
+                    mqttServer.start();
 
-            mqttServer.start();
-
-            asyncJobEngine.start();
+                    asyncJobEngine.start();
+                }
+                catch (Throwable e){
+                    log.error("runner run error", e);
+                }
+            });
         }
         catch (Throwable e){
-            log.error("runner run error ", e);
+            log.error("runner run error", e);
         }
     }
 
