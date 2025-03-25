@@ -2,6 +2,7 @@ package com.ep.mqtt.server.server;
 
 import com.ep.mqtt.server.job.AsyncJobEngine;
 import com.ep.mqtt.server.raft.server.EasyMqttRaftServeSwitch;
+import com.ep.mqtt.server.rpc.RpcServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.ApplicationArguments;
@@ -27,9 +28,14 @@ public class EasyMqttRunner implements ApplicationRunner, DisposableBean {
     @Resource
     private MqttServer mqttServer;
 
+    @Resource
+    private RpcServer rpcServer;
+
     @Override
     public void run(ApplicationArguments args) {
         try {
+            rpcServer.start();
+
             easyMqttRaftServeSwitch.start();
 
             mqttServer.start();
@@ -49,6 +55,8 @@ public class EasyMqttRunner implements ApplicationRunner, DisposableBean {
             mqttServer.stop();
 
             easyMqttRaftServeSwitch.stop();
+
+            rpcServer.stop();
         }
         catch (Throwable e){
             log.error("runner destroy error ", e);

@@ -25,6 +25,8 @@
         <netty.version>4.1.89.Final</netty.version>
         <ratis.version>3.1.0</ratis.version>
         <mybatis-plus-boot-starter.version>3.5.7</mybatis-plus-boot-starter.version>
+        <hazelcast.version>4.2.2</hazelcast.version>
+        <vertx-hazelcast.version>4.2.7</vertx-hazelcast.version>
     </properties>
 
     <dependencies>
