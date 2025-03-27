@@ -47,19 +47,29 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
 
         stopWatch.start("对客户端加锁");
         ClientDto clientDto = clientDao.lock(jobParam.getToClientId());
+        stopWatch.stop();
         if (clientDto == null){
+            stopWatch.start("删除客户端不存在的消息");
             sendMessageDao.deleteById(jobParam.getSendMessageId());
+            stopWatch.stop();
+
+            log.info(stopWatch.prettyPrint());
             return AsyncJobExecuteResult.SUCCESS;
         }
-        stopWatch.stop();
+
 
         stopWatch.start("id自增");
         Integer messageId = messageIdProgressDao.genMessageId(jobParam.getToClientId());
+        stopWatch.stop();
         if (messageId == null){
+            stopWatch.start("删除客户端不存在的消息");
             sendMessageDao.deleteById(jobParam.getSendMessageId());
+            stopWatch.stop();
+
+            log.info(stopWatch.prettyPrint());
             return AsyncJobExecuteResult.SUCCESS;
         }
-        stopWatch.stop();
+
 
         SendMessage sendMessage = new SendMessage();
         sendMessage.setSendQos(jobParam.getSendQos());
