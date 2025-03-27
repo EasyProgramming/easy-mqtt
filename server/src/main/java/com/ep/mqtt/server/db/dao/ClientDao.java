@@ -52,4 +52,14 @@ public interface ClientDao extends BaseMapper<ClientDto> {
         return selectOne(Wrappers.lambdaUpdate(ClientDto.class).eq(ClientDto::getClientId, clientId).last("for update"));
     }
 
+    /**
+     * 更新客户端的消息id进度
+     * @param clientId 客户端id
+     * @param messageIdProgress 消息id进度
+     */
+    default void updateMessageIdProgress(String clientId, Long messageIdProgress){
+        this.update(Wrappers.lambdaUpdate(ClientDto.class).set(ClientDto::getMessageIdProgress, messageIdProgress).eq(ClientDto::getClientId,
+                clientId));
+    }
+
 }

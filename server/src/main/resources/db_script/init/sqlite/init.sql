@@ -29,6 +29,7 @@ CREATE TABLE "client"
     "last_connect_time" integer NOT NULL,
     "create_time"       integer NOT NULL,
     "is_clean_session"  text    NOT NULL,
+    "message_id_progress"  text    NOT NULL,
     PRIMARY KEY ("id")
 );
 
@@ -115,19 +116,6 @@ CREATE TABLE "topic_filter"
 );
 
 -- ----------------------------
--- Table structure for message_id_progress
--- ----------------------------
-DROP TABLE IF EXISTS "message_id_progress";
-CREATE TABLE "message_id_progress"
-(
-    "id" integer NOT NULL,
-    "client_id" text NOT NULL,
-    "progress" integer NOT NULL,
-    PRIMARY KEY ("id")
-);
-
-
--- ----------------------------
 -- Indexes structure for table async_job
 -- ----------------------------
 CREATE UNIQUE INDEX "async_job_index_1"
@@ -200,12 +188,4 @@ CREATE INDEX "send_message_index_3"
 CREATE UNIQUE INDEX "topic_filter_index_1"
     ON "topic_filter" (
                        "topic_filter" ASC
-        );
-
--- ----------------------------
--- Indexes structure for table message_id_progress
--- ----------------------------
-CREATE UNIQUE INDEX "message_id_progress_index_1"
-    ON "message_id_progress" (
-                              "client_id" ASC
         );

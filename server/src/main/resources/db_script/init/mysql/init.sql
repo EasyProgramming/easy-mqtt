@@ -28,6 +28,7 @@ CREATE TABLE `client`  (
                            `last_connect_time` bigint NOT NULL,
                            `create_time` bigint NOT NULL,
                            `is_clean_session` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+                           `message_id_progress` bigint NOT NULL,
                            PRIMARY KEY (`id`) USING BTREE,
                            UNIQUE INDEX `index_1`(`client_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
@@ -44,17 +45,6 @@ CREATE TABLE `client_subscribe`  (
                                      PRIMARY KEY (`id`) USING BTREE,
                                      INDEX `index_1`(`client_id`) USING BTREE,
   INDEX `index_2`(`topic_filter`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Table structure for message_id_progress
--- ----------------------------
-CREATE TABLE `message_id_progress`  (
-                                        `id` bigint NOT NULL,
-                                        `client_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-                                        `progress` bigint NOT NULL,
-                                        PRIMARY KEY (`id`) USING BTREE,
-                                        UNIQUE INDEX `index_1`(`client_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------

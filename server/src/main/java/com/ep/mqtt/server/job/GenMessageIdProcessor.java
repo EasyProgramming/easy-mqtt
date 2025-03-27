@@ -1,7 +1,6 @@
 package com.ep.mqtt.server.job;
 
 import com.ep.mqtt.server.db.dao.ClientDao;
-import com.ep.mqtt.server.db.dao.MessageIdProgressDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.db.dto.ClientDto;
@@ -26,9 +25,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdParam> {
-
-    @Resource
-    private MessageIdProgressDao messageIdProgressDao;
 
     @Resource
     private SendMessageDao sendMessageDao;
@@ -57,19 +53,11 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
             return AsyncJobExecuteResult.SUCCESS;
         }
 
-
         stopWatch.start("id自增");
-        Integer messageId = messageIdProgressDao.genMessageId(jobParam.getToClientId());
+        long lastMessageIdProgress = clientDto.getMessageIdProgress() + 1L;
+        clientDao.updateMessageIdProgress(clientDto.getClientId(), lastMessageIdProgress);
+        int messageId = (int) (lastMessageIdProgress % 65535);
         stopWatch.stop();
-        if (messageId == null){
-            stopWatch.start("删除客户端不存在的消息");
-            sendMessageDao.deleteById(jobParam.getSendMessageId());
-            stopWatch.stop();
-
-            log.info(stopWatch.prettyPrint());
-            return AsyncJobExecuteResult.SUCCESS;
-        }
-
 
         SendMessage sendMessage = new SendMessage();
         sendMessage.setSendQos(jobParam.getSendQos());

@@ -1,6 +1,9 @@
 package com.ep.mqtt.server.deal;
 
-import com.ep.mqtt.server.db.dao.*;
+import com.ep.mqtt.server.db.dao.ClientDao;
+import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
+import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
+import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
@@ -44,9 +47,6 @@ public class CommonDeal {
     private SendMessageDao sendMessageDao;
 
     @Resource
-    private MessageIdProgressDao messageIdProgressDao;
-
-    @Resource
     private AsyncJobManage asyncJobManage;
 
     @Resource
@@ -57,7 +57,6 @@ public class CommonDeal {
         clientDao.deleteByClientId(clientId);
         clientSubscribeDao.deleteByClientId(clientId);
         receiveQos2MessageDao.deleteByFromClientId(clientId);
-        messageIdProgressDao.deleteByClientId(clientId);
     }
 
     @Transactional(rollbackFor = Exception.class)

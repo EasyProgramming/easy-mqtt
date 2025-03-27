@@ -1,7 +1,10 @@
 package com.ep.mqtt.server.deal;
 
 import com.ep.mqtt.server.config.MqttServerProperties;
-import com.ep.mqtt.server.db.dao.*;
+import com.ep.mqtt.server.db.dao.ClientDao;
+import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
+import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
+import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.*;
 import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.metadata.*;
@@ -72,9 +75,6 @@ public class InboundDeal {
 
     @Resource
     private AsyncJobManage asyncJobManage;
-
-    @Resource
-    private MessageIdProgressDao messageIdProgressDao;
 
     @Resource
     private TransactionUtil transactionUtil;
@@ -421,14 +421,9 @@ public class InboundDeal {
         Long now = System.currentTimeMillis();
         clientDto.setCreateTime(now);
         clientDto.setLastConnectTime(now);
+        clientDto.setMessageIdProgress(0L);
 
         clientDao.insert(clientDto);
-
-        MessageIdProgressDto messageIdProgressDto = new MessageIdProgressDto();
-        messageIdProgressDto.setClientId(clientId);
-        messageIdProgressDto.setProgress(0L);
-
-        messageIdProgressDao.insert(messageIdProgressDto);
     }
 
     @Data

@@ -35,6 +35,7 @@ create table CLIENT
     LAST_CONNECT_TIME BIGINT  not null,
     CREATE_TIME       BIGINT  not null,
     IS_CLEAN_SESSION  VARCHAR not null,
+    MESSAGE_ID_PROGRESS  BIGINT not null,
     constraint CLIENT_PK
         primary key (ID)
 );
@@ -153,19 +154,3 @@ create table TOPIC_FILTER
 
 create unique index TOPIC_FILTER_INDEX_1
     on TOPIC_FILTER (TOPIC_FILTER);
-
-
--- ----------------------------
--- Table structure for message_id_progress
--- ----------------------------
-create table MESSAGE_ID_PROGRESS
-(
-    ID        BIGINT  not null,
-    CLIENT_ID VARCHAR not null,
-    PROGRESS  BIGINT  not null,
-    constraint MESSAGE_ID_PROGRESS_PK
-        primary key (ID)
-);
-
-create unique index MESSAGE_ID_PROGRESS_INDEX_1
-    on MESSAGE_ID_PROGRESS (CLIENT_ID);
