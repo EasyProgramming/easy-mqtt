@@ -57,7 +57,6 @@ public class CommonDeal {
         clientDao.deleteByClientId(clientId);
         clientSubscribeDao.deleteByClientId(clientId);
         receiveQos2MessageDao.deleteByFromClientId(clientId);
-        sendMessageDao.deleteByToClientId(clientId);
         messageIdProgressDao.deleteByClientId(clientId);
     }
 
