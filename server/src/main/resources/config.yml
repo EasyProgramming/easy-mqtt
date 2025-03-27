@@ -1,5 +1,7 @@
 mqtt:
   server:
     tcp-port: 8081
-    node-address: 127.0.0.1:8082
+    raft-port: 8082
+    rpc-port: 8083
+    node-ip: 127.0.0.1
     run-mode: standalone

@@ -36,9 +36,19 @@ public class MqttServerProperties {
     private Integer tcpPort = 8081;
 
     /**
-     * 节点的地址（集群模式下，各节点的地址需要以英文逗号拼接，需要注意的是：第一个地址需要为本机的地址）
+     * raft端口
      */
-    private String nodeAddress = "127.0.0.1:8082";
+    private Integer raftPort = 8082;
+
+    /**
+     * rpc端口
+     */
+    private Integer rpcPort = 8083;
+
+    /**
+     * 节点的ip（集群模式下，各节点的ip需要以英文逗号拼接，需要注意的是：第一个地址需要为本机的ip）
+     */
+    private String nodeIp = "127.0.0.1";
 
     /**
      * 认证接口地址，如果为null或空字符串则不鉴权
@@ -94,7 +104,7 @@ public class MqttServerProperties {
         /**
          * websocket端口
          */
-        private Integer websocketPort = 8083;
+        private Integer websocketPort = 8084;
 
         /**
          * websocket连接地址
