@@ -43,4 +43,13 @@ public interface ClientDao extends BaseMapper<ClientDto> {
         this.update(Wrappers.lambdaUpdate(ClientDto.class).set(ClientDto::getLastConnectTime, connectTime).eq(ClientDto::getClientId, clientId));
     }
 
+    /**
+     * 对客户端加锁
+     * @param clientId 客户端id
+     * @return 客户端数据
+     */
+    default ClientDto lock(String clientId){
+        return selectOne(Wrappers.lambdaUpdate(ClientDto.class).eq(ClientDto::getClientId, clientId).last("for update"));
+    }
+
 }

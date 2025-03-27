@@ -143,6 +143,11 @@ public class InboundDeal {
     @Transactional(rollbackFor = Exception.class)
     public void subscribe(ChannelHandlerContext channelHandlerContext, int subMessageId, String clientId,
                           List<MqttTopicSubscription> clientSubscribeList) {
+        ClientDto clientDto = clientDao.lock(clientId);
+        if (clientDto == null){
+            throw new RuntimeException(String.format("client [%s], not exist", clientId));
+        }
+
         Date now = new Date();
 
         List<ClientSubscribeDto> existClientSubscribeList = clientSubscribeDao.getClientSubscribe(clientId,
@@ -251,6 +256,11 @@ public class InboundDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public void unSubscribe(ChannelHandlerContext channelHandlerContext, int unSubMessageId, String clientId, Set<String> topicFilterSet) {
+        ClientDto clientDto = clientDao.lock(clientId);
+        if (clientDto == null){
+            throw new RuntimeException(String.format("client [%s], not exist", clientId));
+        }
+
         clientSubscribeDao.deleteClientSubscribe(clientId, topicFilterSet);
 
         MqttUtil.sendUnSubAck(channelHandlerContext, unSubMessageId);
@@ -270,7 +280,7 @@ public class InboundDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean connect(String clientId, boolean isCleanSession) {
-        ClientDto existClientDto = clientDao.selectByClientId(clientId);
+        ClientDto existClientDto = clientDao.lock(clientId);
 
         if (isCleanSession) {
             if (existClientDto != null) {

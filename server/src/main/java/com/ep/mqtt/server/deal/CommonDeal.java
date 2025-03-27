@@ -2,6 +2,7 @@ package com.ep.mqtt.server.deal;
 
 import com.ep.mqtt.server.db.dao.*;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
+import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.job.AsyncJobManage;
@@ -64,7 +65,12 @@ public class CommonDeal {
     public void afterDisconnect(DisconnectReason disconnectReason, Session session){
         if (!DisconnectReason.REPEAT_CONNECT.equals(disconnectReason)){
             if (session!= null && session.getIsCleanSession()){
-                clearClientData(session.getClientId());
+                ClientDto clientDto = clientDao.lock(session.getClientId());
+                if (clientDto == null){
+                    throw new RuntimeException(String.format("client [%s], not exist", session.getClientId()));
+                }
+
+                clearClientData(clientDto.getClientId());
             }
         }
 

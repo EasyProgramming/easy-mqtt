@@ -1,8 +1,10 @@
 package com.ep.mqtt.server.job;
 
+import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.MessageIdProgressDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
+import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.rpc.EasyMqttRpcClient;
 import com.ep.mqtt.server.rpc.transfer.SendMessage;
@@ -31,6 +33,9 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
     @Resource
     private SendMessageDao sendMessageDao;
 
+    @Resource
+    private ClientDao clientDao;
+
     public GenMessageIdProcessor() {
         super(new ThreadPoolExecutor(Constant.PROCESSOR_NUM * 8, Constant.PROCESSOR_NUM * 8, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("gen-message-id-%s").build()));
@@ -40,13 +45,21 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
     public AsyncJobExecuteResult process(AsyncJobDto asyncJobDto, GenMessageIdParam jobParam) {
         StopWatch stopWatch = new StopWatch("生成消息id");
 
-        stopWatch.start("id自增");
-        Integer messageId = messageIdProgressDao.genMessageId(jobParam.getToClientId());
-        stopWatch.stop();
-
-        if (messageId == null){
+        stopWatch.start("对客户端加锁");
+        ClientDto clientDto = clientDao.lock(jobParam.getToClientId());
+        if (clientDto == null){
+            sendMessageDao.deleteById(jobParam.getSendMessageId());
             return AsyncJobExecuteResult.SUCCESS;
         }
+        stopWatch.stop();
+
+        stopWatch.start("id自增");
+        Integer messageId = messageIdProgressDao.genMessageId(jobParam.getToClientId());
+        if (messageId == null){
+            sendMessageDao.deleteById(jobParam.getSendMessageId());
+            return AsyncJobExecuteResult.SUCCESS;
+        }
+        stopWatch.stop();
 
         SendMessage sendMessage = new SendMessage();
         sendMessage.setSendQos(jobParam.getSendQos());
