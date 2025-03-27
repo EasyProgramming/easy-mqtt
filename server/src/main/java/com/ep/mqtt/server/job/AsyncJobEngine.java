@@ -24,6 +24,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 /**
@@ -47,6 +48,10 @@ public class AsyncJobEngine {
             new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setNameFormat("async-job-occupy-%s").build());
 
     private static Long JOB_CURSOR = 0L;
+
+    private static final Long ING_JOB_SIZE = 30000L;
+
+    private static final LongAdder ING_JOB_COUNTER = new LongAdder();
 
     @Resource
     private AsyncJobDao asyncJobDao;
@@ -102,6 +107,11 @@ public class AsyncJobEngine {
             try {
                 long jobStart = System.currentTimeMillis();
 
+                long ingJobCountNum = ING_JOB_COUNTER.sum();
+                if (ingJobCountNum > ING_JOB_SIZE){
+                    return;
+                }
+
                 List<AsyncJobDto> pendingJobList = asyncJobDao.getPendingJob(2000, JOB_CURSOR);
                 if (CollectionUtils.isEmpty(pendingJobList)) {
                     return;
@@ -110,10 +120,12 @@ public class AsyncJobEngine {
                 JOB_CURSOR = pendingJobList.get(pendingJobList.size() - 1).getId();
 
                 for (AsyncJobDto pendingJob : pendingJobList) {
+                    ING_JOB_COUNTER.increment();
+
                     OCCUPY_THREAD_POOL.submit(()-> occupyJob(pendingJob));
                 }
 
-                log.info("获取待执行任务，任务id:{}, 任务数:{}, 耗时{}ms", id, pendingJobList.size(), System.currentTimeMillis() - jobStart);
+                log.info("获取待执行任务，任务id:{}, 任务数:{}, 正在处理的任务数:{}, 耗时{}ms", id, pendingJobList.size(), ingJobCountNum, System.currentTimeMillis() - jobStart);
             } catch (Throwable e) {
                 log.error("获取待执行任务出错，任务id:{}", id, e);
             }
@@ -122,13 +134,13 @@ public class AsyncJobEngine {
 
     private void occupyJob(AsyncJobDto pendingJob){
         long start = System.currentTimeMillis();
+        boolean isDecrement = true;
 
         try {
             Boolean isOccupy = transactionUtil.transaction(() -> asyncJobDao.tryOccupyJob(pendingJob.getBusinessId()));
             if (!isOccupy) {
                 return;
             }
-
             AbstractJobProcessor<Object> jobProcessor = (AbstractJobProcessor<Object>)processorMap.get(pendingJob.getBusinessType());
 
             if (jobProcessor == null) {
@@ -137,14 +149,24 @@ public class AsyncJobEngine {
                 return;
             }
 
-            jobProcessor.getThreadPool().submit(() -> executeJob(pendingJob, jobProcessor));
+            jobProcessor.getThreadPool().submit(() -> {
+                executeJob(pendingJob, jobProcessor);
 
+                ING_JOB_COUNTER.decrement();
+            });
+
+            isDecrement = false;
             log.info("预占任务：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
                     System.currentTimeMillis() - start);
         }
         catch (Throwable e){
             log.error("预占任务出错：事件类型[{}]，事件id[{}]，耗时[{}ms]", pendingJob.getBusinessType(), pendingJob.getBusinessId(),
                     System.currentTimeMillis() - start, e);
+        }
+        finally {
+            if (isDecrement){
+                ING_JOB_COUNTER.decrement();
+            }
         }
     }
 

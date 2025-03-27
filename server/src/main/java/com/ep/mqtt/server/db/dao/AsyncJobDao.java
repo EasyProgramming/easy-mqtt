@@ -40,14 +40,10 @@ public interface AsyncJobDao extends BaseMapper<AsyncJobDto> {
      * @return 是否占用成功
      */
     default Boolean tryOccupyJob(String businessId) {
-        AsyncJobDto asyncJobDto = lock(businessId);
-        if (asyncJobDto == null || !AsyncJobStatus.READY.equals(asyncJobDto.getExecuteStatus())){
-            return false;
-        }
-
         return update(
                 Wrappers.lambdaUpdate(AsyncJobDto.class).set(AsyncJobDto::getLastStartTime, System.currentTimeMillis())
-                        .set(AsyncJobDto::getExecuteStatus, AsyncJobStatus.EXECUTING).eq(AsyncJobDto::getBusinessId, businessId)) > 0;
+                        .set(AsyncJobDto::getExecuteStatus, AsyncJobStatus.EXECUTING).eq(AsyncJobDto::getBusinessId, businessId)
+                        .eq(AsyncJobDto::getExecuteStatus, AsyncJobStatus.READY)) > 0;
     }
 
     /**
