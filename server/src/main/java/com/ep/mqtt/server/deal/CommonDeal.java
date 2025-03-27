@@ -162,7 +162,7 @@ public class CommonDeal {
                 otherMessageDtoList.add(sendMessageDto);
             }
         }
-        sendMessageDao.insert(otherMessageDtoList, 10000);
+        sendMessageDao.insert(otherMessageDtoList);
 
         Long now = System.currentTimeMillis();
         List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();

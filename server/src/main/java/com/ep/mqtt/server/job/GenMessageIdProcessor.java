@@ -101,4 +101,9 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
     public Integer getMaxRetryNum() {
         return null;
     }
+
+    @Override
+    public boolean isRetain() {
+        return false;
+    }
 }

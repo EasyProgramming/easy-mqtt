@@ -113,7 +113,7 @@ public class AsyncJobEngine {
                     OCCUPY_THREAD_POOL.submit(()-> occupyJob(pendingJob));
                 }
 
-                log.info("获取待执行任务，任务id:{}, 耗时{}ms", id, System.currentTimeMillis() - jobStart);
+                log.info("获取待执行任务，任务id:{}, 任务数:{}, 耗时{}ms", id, pendingJobList.size(), System.currentTimeMillis() - jobStart);
             } catch (Throwable e) {
                 log.error("获取待执行任务出错，任务id:{}", id, e);
             }
@@ -194,10 +194,21 @@ public class AsyncJobEngine {
                         jobStatus = AsyncJobStatus.READY;
                         expectExecuteTime = System.currentTimeMillis() + jobProcessor.getRetryInterval() * 1000L;
                     }
+
+                    asyncJobDao.finishJob(asyncJobDto.getBusinessId(), jobStatus, asyncJobDto.getExecuteNum() + 1, executeResult,
+                            executeResultDesc, expectExecuteTime);
+                }
+                else {
+                    if (jobProcessor.isRetain()){
+                        asyncJobDao.finishJob(asyncJobDto.getBusinessId(), jobStatus, asyncJobDto.getExecuteNum() + 1, executeResult,
+                                executeResultDesc, expectExecuteTime);
+                    }
+                    else {
+                        asyncJobDao.deleteById(asyncJobDto.getId());
+                    }
+
                 }
 
-                asyncJobDao.finishJob(asyncJobDto.getBusinessId(), jobStatus, asyncJobDto.getExecuteNum() + 1, executeResult,
-                        executeResultDesc, expectExecuteTime);
                 return null;
             });
 

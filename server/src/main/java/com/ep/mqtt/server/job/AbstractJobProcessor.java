@@ -1,13 +1,12 @@
 package com.ep.mqtt.server.job;
 
-import java.util.concurrent.ThreadPoolExecutor;
-
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
-
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
+
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * @author : zbz
@@ -69,5 +68,13 @@ public abstract class AbstractJobProcessor<K extends Object> {
      */
     @Nullable
     public abstract Integer getMaxRetryNum();
+
+    /**
+     * 是否保留成功执行的任务
+     * @return 开关
+     */
+    public boolean isRetain(){
+        return true;
+    }
 
 }
