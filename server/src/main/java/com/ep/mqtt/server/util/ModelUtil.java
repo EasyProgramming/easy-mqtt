@@ -9,8 +9,6 @@ import com.ep.mqtt.server.metadata.AsyncJobStatus;
 import com.ep.mqtt.server.metadata.Qos;
 import com.ep.mqtt.server.metadata.YesOrNo;
 
-import java.util.UUID;
-
 /**
  * @author zbz
  * @date 2025/3/7 15:24
@@ -30,13 +28,17 @@ public class ModelUtil {
         return dispatchMessageParam;
     }
 
-    public static GenMessageIdParam buildGenMessageIdParam(Long sendMessageId, Qos sendQos, String topic, String toClientId, String payload, YesOrNo isRetain){
+    public static GenMessageIdParam buildGenMessageIdParam(Qos receiveQos, Integer receivePacketId, String fromClientId, Qos sendQos, String topic,
+                                                           String toClientId, String payload, YesOrNo isReceivePubRec, YesOrNo isRetain){
         GenMessageIdParam genMessageIdParam = new GenMessageIdParam();
-        genMessageIdParam.setSendMessageId(sendMessageId);
+        genMessageIdParam.setReceiveQos(receiveQos);
+        genMessageIdParam.setReceivePacketId(receivePacketId);
+        genMessageIdParam.setFromClientId(fromClientId);
         genMessageIdParam.setSendQos(sendQos);
         genMessageIdParam.setTopic(topic);
         genMessageIdParam.setToClientId(toClientId);
         genMessageIdParam.setPayload(payload);
+        genMessageIdParam.setIsReceivePubRec(isReceivePubRec);
         genMessageIdParam.setIsRetain(isRetain);
 
         return genMessageIdParam;
@@ -73,23 +75,4 @@ public class ModelUtil {
         return sendMessageDto;
     }
 
-    public static AsyncJobDto buildGenMessageIdAsyncJobDto(SendMessageDto sendMessageDto, Long now) {
-        GenMessageIdParam genMessageIdParam = ModelUtil.buildGenMessageIdParam(
-                sendMessageDto.getId(),
-                sendMessageDto.getSendQos(),
-                sendMessageDto.getTopic(),
-                sendMessageDto.getToClientId(),
-                sendMessageDto.getPayload(),
-                sendMessageDto.getIsRetain()
-        );
-
-        String businessId;
-        if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
-            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString());
-        } else {
-            businessId = AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(sendMessageDto.getId());
-        }
-
-        return ModelUtil.buildAsyncJobDto(businessId, AsyncJobBusinessType.GEN_MESSAGE_ID, now, 0, AsyncJobStatus.READY, genMessageIdParam);
-    }
 }
