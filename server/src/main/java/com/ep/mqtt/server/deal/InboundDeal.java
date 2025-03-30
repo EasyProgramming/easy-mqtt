@@ -35,10 +35,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -205,9 +202,8 @@ public class InboundDeal {
     }
 
     private void dealRetainMessage(String clientId, Date now, Map<String, Qos> editTopicFilterMap){
-        Long validTime = now.getTime() + 1000L * 60 * 60 * 24 * 7;
-        List<SendMessageDto> qos0MessageDtoList = Lists.newArrayList();
-        List<SendMessageDto> otherMessageDtoList = Lists.newArrayList();
+        List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
+
         for (Map.Entry<String, Qos> entry : editTopicFilterMap.entrySet()) {
             List<RetainMessageStore.RetainMessage> retainMessageList = RetainMessageStore.matchRetainMessage(entry.getKey());
             if (CollectionUtils.isEmpty(retainMessageList)){
@@ -215,38 +211,27 @@ public class InboundDeal {
             }
 
             for (RetainMessageStore.RetainMessage retainMessage : retainMessageList){
-                SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
-                        retainMessage.getReceiveQos(),
-                        retainMessage.getReceivePacketId(),
-                        retainMessage.getFromClientId(),
-                        entry.getValue().getCode() >= retainMessage.getReceiveQos().getCode() ? retainMessage.getReceiveQos() : entry.getValue(),
-                        retainMessage.getTopic(),
-                        null,
-                        clientId,
-                        retainMessage.getPayload(),
-                        YesOrNo.NO,
-                        validTime,
-                        YesOrNo.YES
+                genMessageIdAsyncJobDtoList.add(
+                        ModelUtil.buildAsyncJobDto(
+                                AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString()),
+                                AsyncJobBusinessType.GEN_MESSAGE_ID,
+                                now.getTime(),
+                                0,
+                                AsyncJobStatus.READY,
+                                ModelUtil.buildGenMessageIdParam(
+                                        retainMessage.getReceiveQos(),
+                                        retainMessage.getReceivePacketId(),
+                                        retainMessage.getFromClientId(),
+                                        entry.getValue().getCode() >= retainMessage.getReceiveQos().getCode() ? retainMessage.getReceiveQos() : entry.getValue(),
+                                        retainMessage.getTopic(),
+                                        clientId,
+                                        retainMessage.getPayload(),
+                                        YesOrNo.NO,
+                                        YesOrNo.YES
+                                )
+                        )
                 );
-
-                if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
-                    qos0MessageDtoList.add(sendMessageDto);
-                } else {
-                    otherMessageDtoList.add(sendMessageDto);
-                }
             }
-        }
-
-        if (!CollectionUtils.isEmpty(otherMessageDtoList)){
-            sendMessageDao.insert(otherMessageDtoList, 10000);
-        }
-
-        List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
-        for (SendMessageDto sendMessageDto : qos0MessageDtoList) {
-            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
-        }
-        for (SendMessageDto sendMessageDto : otherMessageDtoList) {
-            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now.getTime()));
         }
 
         if (!CollectionUtils.isEmpty(genMessageIdAsyncJobDtoList)){

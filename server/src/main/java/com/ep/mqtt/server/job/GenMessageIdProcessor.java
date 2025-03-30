@@ -4,9 +4,11 @@ import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.db.dto.ClientDto;
+import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.rpc.EasyMqttRpcClient;
 import com.ep.mqtt.server.rpc.transfer.SendMessage;
+import com.ep.mqtt.server.util.ModelUtil;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -45,10 +47,6 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
         ClientDto clientDto = clientDao.lock(jobParam.getToClientId());
         stopWatch.stop();
         if (clientDto == null){
-            stopWatch.start("删除客户端不存在的消息");
-            sendMessageDao.deleteById(jobParam.getSendMessageId());
-            stopWatch.stop();
-
             log.info(stopWatch.prettyPrint());
             return AsyncJobExecuteResult.SUCCESS;
         }
@@ -68,18 +66,29 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
         sendMessage.setIsDup(false);
         sendMessage.setIsRetain(jobParam.getIsRetain().getBoolean());
 
-        if (jobParam.getSendQos() == Qos.LEVEL_0) {
-            stopWatch.start("发送rpc消息-qos0");
-            EasyMqttRpcClient.broadcast(RpcCommand.SEND_MESSAGE, sendMessage);
+        if (jobParam.getSendQos() != Qos.LEVEL_0) {
+            stopWatch.start("插入数据库");
+            SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
+                    jobParam.getReceiveQos(),
+                    jobParam.getReceivePacketId(),
+                    jobParam.getFromClientId(),
+                    jobParam.getSendQos(),
+                    jobParam.getTopic(),
+                    messageId,
+                    jobParam.getToClientId(),
+                    jobParam.getPayload(),
+                    jobParam.getIsReceivePubRec(),
+                    System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7,
+                    jobParam.getIsRetain()
+            );
             stopWatch.stop();
+
+            sendMessageDao.insert(sendMessageDto);
         }
-        else {
-            if (sendMessageDao.updateSendPacketId(jobParam.getSendMessageId(), messageId)) {
-                stopWatch.start("发送rpc消息-qos12");
-                EasyMqttRpcClient.broadcast(RpcCommand.SEND_MESSAGE, sendMessage);
-                stopWatch.stop();
-            }
-        }
+
+        stopWatch.start("发送rpc消息");
+        EasyMqttRpcClient.broadcast(RpcCommand.SEND_MESSAGE, sendMessage);
+        stopWatch.stop();
 
         log.info(stopWatch.prettyPrint());
         return AsyncJobExecuteResult.SUCCESS;

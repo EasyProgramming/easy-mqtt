@@ -11,7 +11,11 @@ import lombok.Data;
 @Data
 public class GenMessageIdParam {
 
-    private Long sendMessageId;
+    private Qos receiveQos;
+
+    private Integer receivePacketId;
+
+    private String fromClientId;
 
     private Qos sendQos;
 
@@ -20,6 +24,8 @@ public class GenMessageIdParam {
     private String toClientId;
 
     private String payload;
+
+    private YesOrNo isReceivePubRec;
 
     private YesOrNo isRetain;
 

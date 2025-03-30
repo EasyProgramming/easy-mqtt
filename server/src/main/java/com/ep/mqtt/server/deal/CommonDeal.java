@@ -7,12 +7,9 @@ import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
-import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.job.DispatchMessageParam;
-import com.ep.mqtt.server.metadata.DisconnectReason;
-import com.ep.mqtt.server.metadata.Qos;
-import com.ep.mqtt.server.metadata.YesOrNo;
+import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.ModelUtil;
@@ -26,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * @author zbz
@@ -137,41 +135,32 @@ public class CommonDeal {
             return;
         }
 
-        Long validTime = System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7;
-        List<SendMessageDto> qos0MessageDtoList = Lists.newArrayList();
-        List<SendMessageDto> otherMessageDtoList = Lists.newArrayList();
-        for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
-            SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
-                    dispatchMessageParam.getReceiveQos(),
-                    dispatchMessageParam.getReceivePacketId(),
-                    dispatchMessageParam.getFromClientId(),
-                    clientQosEntry.getValue().getCode() >= dispatchMessageParam.getReceiveQos().getCode() ? dispatchMessageParam.getReceiveQos() :
-                            clientQosEntry.getValue(),
-                    dispatchMessageParam.getTopic(),
-                    null,
-                    clientQosEntry.getKey(),
-                    dispatchMessageParam.getPayload(),
-                    YesOrNo.NO,
-                    validTime,
-                    dispatchMessageParam.getIsRetain()
-            );
-
-            if (sendMessageDto.getSendQos() == Qos.LEVEL_0) {
-                qos0MessageDtoList.add(sendMessageDto);
-            } else {
-                otherMessageDtoList.add(sendMessageDto);
-            }
-        }
-        sendMessageDao.insert(otherMessageDtoList);
-
         Long now = System.currentTimeMillis();
         List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
-        for (SendMessageDto sendMessageDto : qos0MessageDtoList) {
-            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now));
+        for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
+            genMessageIdAsyncJobDtoList.add(
+                    ModelUtil.buildAsyncJobDto(
+                            AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString()),
+                            AsyncJobBusinessType.GEN_MESSAGE_ID,
+                            now,
+                            0,
+                            AsyncJobStatus.READY,
+                            ModelUtil.buildGenMessageIdParam(
+                                    dispatchMessageParam.getReceiveQos(),
+                                    dispatchMessageParam.getReceivePacketId(),
+                                    dispatchMessageParam.getFromClientId(),
+                                    clientQosEntry.getValue().getCode() >= dispatchMessageParam.getReceiveQos().getCode() ?
+                                            dispatchMessageParam.getReceiveQos() : clientQosEntry.getValue(),
+                                    dispatchMessageParam.getTopic(),
+                                    clientQosEntry.getKey(),
+                                    dispatchMessageParam.getPayload(),
+                                    YesOrNo.NO,
+                                    dispatchMessageParam.getIsRetain()
+                            )
+                    )
+            );
         }
-        for (SendMessageDto sendMessageDto : otherMessageDtoList) {
-            genMessageIdAsyncJobDtoList.add(ModelUtil.buildGenMessageIdAsyncJobDto(sendMessageDto, now));
-        }
+
         asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
     }
 
