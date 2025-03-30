@@ -111,8 +111,4 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
         return null;
     }
 
-    @Override
-    public boolean isRetain() {
-        return false;
-    }
 }
