@@ -82,7 +82,7 @@ public class MqttServerProperties {
         /**
          * 数据库
          */
-        private Integer database;
+        private String database;
 
         /**
          * 账号
