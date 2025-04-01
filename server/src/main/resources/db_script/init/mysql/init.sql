@@ -16,7 +16,7 @@ CREATE TABLE `async_job`  (
                               `job_param` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                               PRIMARY KEY (`id`) USING BTREE,
                               UNIQUE INDEX `index_1`(`business_id`) USING BTREE,
-                              INDEX `index_2`(`expect_execute_time`, `execute_status`) USING BTREE
+                              INDEX `index_2`(`expect_execute_time`, `id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------

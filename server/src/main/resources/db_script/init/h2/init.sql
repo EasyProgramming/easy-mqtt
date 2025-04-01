@@ -23,7 +23,7 @@ create unique index ASYNC_JOB_INDEX_1
     on ASYNC_JOB (BUSINESS_ID);
 
 create index ASYNC_JOB_INDEX_2
-    on ASYNC_JOB (EXPECT_EXECUTE_TIME, EXECUTE_STATUS);
+    on ASYNC_JOB (EXPECT_EXECUTE_TIME, ID);
 
 -- ----------------------------
 -- Table structure for client
