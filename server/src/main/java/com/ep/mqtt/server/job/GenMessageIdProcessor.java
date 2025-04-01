@@ -51,22 +51,23 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
             return AsyncJobExecuteResult.SUCCESS;
         }
 
-        stopWatch.start("id自增");
-        long lastMessageIdProgress = clientDto.getMessageIdProgress() + 1L;
-        clientDao.updateMessageIdProgress(clientDto.getClientId(), lastMessageIdProgress);
-        int messageId = (int) (lastMessageIdProgress % 65535);
-        stopWatch.stop();
-
         SendMessage sendMessage = new SendMessage();
         sendMessage.setSendQos(jobParam.getSendQos());
         sendMessage.setTopic(jobParam.getTopic());
-        sendMessage.setSendPacketId(messageId);
         sendMessage.setToClientId(jobParam.getToClientId());
         sendMessage.setPayload(jobParam.getPayload());
         sendMessage.setIsDup(false);
         sendMessage.setIsRetain(jobParam.getIsRetain().getBoolean());
 
         if (jobParam.getSendQos() != Qos.LEVEL_0) {
+            stopWatch.start("id自增");
+            long lastMessageIdProgress = clientDto.getMessageIdProgress() + 1L;
+            clientDao.updateMessageIdProgress(clientDto.getClientId(), lastMessageIdProgress);
+            int messageId = (int) (lastMessageIdProgress % 65535);
+            stopWatch.stop();
+
+            sendMessage.setSendPacketId(messageId);
+
             stopWatch.start("插入数据库");
             SendMessageDto sendMessageDto = ModelUtil.buildSendMessageDto(
                     jobParam.getReceiveQos(),
