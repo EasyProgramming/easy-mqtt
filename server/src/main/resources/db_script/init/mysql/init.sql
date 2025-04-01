@@ -2,7 +2,7 @@
 -- Table structure for async_job
 -- ----------------------------
 CREATE TABLE `async_job`  (
-                              `id` bigint NOT NULL,
+                              `id` bigint NOT NULL AUTO_INCREMENT,
                               `business_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                               `business_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                               `last_start_time` bigint NULL DEFAULT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE `async_job`  (
 -- Table structure for client
 -- ----------------------------
 CREATE TABLE `client`  (
-                           `id` bigint NOT NULL,
+                           `id` bigint NOT NULL AUTO_INCREMENT,
                            `client_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                            `last_connect_time` bigint NOT NULL,
                            `create_time` bigint NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE `client`  (
 -- Table structure for client_subscribe
 -- ----------------------------
 CREATE TABLE `client_subscribe`  (
-                                     `id` bigint NOT NULL,
+                                     `id` bigint NOT NULL AUTO_INCREMENT,
                                      `client_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                      `topic_filter` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                      `subscribe_time` bigint NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE `meta_data`  (
 -- Table structure for receive_qos2_message
 -- ----------------------------
 CREATE TABLE `receive_qos2_message`  (
-                                         `id` bigint NOT NULL,
+                                         `id` bigint NOT NULL AUTO_INCREMENT,
                                          `receive_qos` int NOT NULL,
                                          `topic` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                          `receive_packet_id` int NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE `receive_qos2_message`  (
 -- Table structure for retain_message
 -- ----------------------------
 CREATE TABLE `retain_message`  (
-                                   `id` bigint NOT NULL,
+                                   `id` bigint NOT NULL AUTO_INCREMENT,
                                    `payload` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                    `receive_qos` int NOT NULL,
                                    `topic` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE `retain_message`  (
 -- Table structure for send_message
 -- ----------------------------
 CREATE TABLE `send_message`  (
-                                 `id` bigint NOT NULL,
+                                 `id` bigint NOT NULL AUTO_INCREMENT,
                                  `receive_qos` int NOT NULL,
                                  `receive_packet_id` int NOT NULL,
                                  `from_client_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -111,7 +111,7 @@ CREATE TABLE `send_message`  (
 -- Table structure for topic_filter
 -- ----------------------------
 CREATE TABLE `topic_filter`  (
-                                 `id` bigint NOT NULL,
+                                 `id` bigint NOT NULL AUTO_INCREMENT,
                                  `topic_filter` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                  PRIMARY KEY (`id`) USING BTREE,
                                  UNIQUE INDEX `index_1`(`topic_filter`) USING BTREE

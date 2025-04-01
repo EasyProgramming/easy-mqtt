@@ -40,7 +40,7 @@ public class MybatisPlusConfig {
     @Bean
     public MybatisPlusPropertiesCustomizer mybatisPlusPropertiesCustomizer() {
         return properties -> {
-            properties.getGlobalConfig().getDbConfig().setIdType(IdType.ASSIGN_ID);
+            properties.getGlobalConfig().getDbConfig().setIdType(IdType.AUTO);
             properties.getGlobalConfig().getDbConfig().setInsertStrategy(FieldStrategy.ALWAYS);
             properties.getGlobalConfig().getDbConfig().setUpdateStrategy(FieldStrategy.ALWAYS);
             properties.getGlobalConfig().getDbConfig().setWhereStrategy(FieldStrategy.ALWAYS);

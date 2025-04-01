@@ -3,7 +3,7 @@
 -- ----------------------------
 create table ASYNC_JOB
 (
-    ID                       BIGINT  not null,
+    ID                       BIGINT  auto_increment,
     BUSINESS_ID              VARCHAR not null,
     BUSINESS_TYPE            VARCHAR not null,
     LAST_START_TIME          BIGINT,
@@ -30,7 +30,7 @@ create index ASYNC_JOB_INDEX_2
 -- ----------------------------
 create table CLIENT
 (
-    ID                BIGINT  not null,
+    ID                BIGINT  auto_increment,
     CLIENT_ID         VARCHAR not null,
     LAST_CONNECT_TIME BIGINT  not null,
     CREATE_TIME       BIGINT  not null,
@@ -48,7 +48,7 @@ create unique index CLIENT_INDEX_1
 -- ----------------------------
 create table CLIENT_SUBSCRIBE
 (
-    ID             BIGINT  not null,
+    ID             BIGINT  auto_increment,
     CLIENT_ID      VARCHAR not null,
     TOPIC_FILTER   VARCHAR not null,
     SUBSCRIBE_TIME BIGINT  not null,
@@ -80,7 +80,7 @@ create table META_DATA
 -- ----------------------------
 create table RECEIVE_QOS2_MESSAGE
 (
-    ID                BIGINT  not null,
+    ID                BIGINT  auto_increment,
     RECEIVE_QOS       INT     not null,
     TOPIC             VARCHAR not null,
     RECEIVE_PACKET_ID INT     not null,
@@ -100,7 +100,7 @@ create unique index RECEIVE_QOS2_MESSAGE_INDEX_1
 -- ----------------------------
 create table RETAIN_MESSAGE
 (
-    ID          BIGINT  not null,
+    ID          BIGINT  auto_increment,
     PAYLOAD     VARCHAR not null,
     RECEIVE_QOS INT     not null,
     TOPIC       VARCHAR not null,
@@ -116,7 +116,7 @@ create index RETAIN_MESSAGE_INDEX_1
 -- ----------------------------
 create table SEND_MESSAGE
 (
-    ID                 BIGINT  not null,
+    ID                 BIGINT  auto_increment,
     RECEIVE_QOS        INT     not null,
     RECEIVE_PACKET_ID  INT     not null,
     FROM_CLIENT_ID     VARCHAR not null,
@@ -146,7 +146,7 @@ create index SEND_MESSAGE_INDEX_3
 -- ----------------------------
 create table TOPIC_FILTER
 (
-    ID           BIGINT  not null,
+    ID           BIGINT  auto_increment,
     TOPIC_FILTER VARCHAR not null,
     constraint TOPIC_FILTER_PK
         primary key (ID)

@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.db.dto;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -11,7 +12,7 @@ import lombok.Data;
 @Data
 @TableName(value = "meta_data")
 public class MetaDataDto {
-    @TableId
+    @TableId(type = IdType.ASSIGN_ID)
     private String key;
 
     private String value;
