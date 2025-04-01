@@ -45,7 +45,9 @@ public class DataSourceConfig {
                 if (mqttServerProperties.getDb() == null){
                     throw new RuntimeException("集群模式下，需要配置数据库信息");
                 }
-                hikariDataSource.setJdbcUrl(mqttServerProperties.getDb().getUrl());
+                String urlTemplate = "jdbc:mysql://%s:%s/%s?characterEncoding=UTF-8&rewriteBatchedStatements=true";
+                hikariDataSource.setJdbcUrl(String.format(urlTemplate, mqttServerProperties.getDb().getHost(),
+                        mqttServerProperties.getDb().getPort(), mqttServerProperties.getDb().getDatabase()));
                 hikariDataSource.setUsername(mqttServerProperties.getDb().getUsername());
                 hikariDataSource.setPassword(mqttServerProperties.getDb().getPassword());
                 hikariDataSource.setMaximumPoolSize(Constant.PROCESSOR_NUM * 10);

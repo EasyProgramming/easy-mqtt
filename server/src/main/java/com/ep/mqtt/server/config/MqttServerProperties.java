@@ -72,7 +72,17 @@ public class MqttServerProperties {
         /**
          * 数据库地址
          */
-        private String url;
+        private String host;
+
+        /**
+         * 数据库端口
+         */
+        private Integer port;
+
+        /**
+         * 数据库
+         */
+        private Integer database;
 
         /**
          * 账号
