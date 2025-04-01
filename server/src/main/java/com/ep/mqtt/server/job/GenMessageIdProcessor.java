@@ -81,9 +81,9 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
                     System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7,
                     jobParam.getIsRetain()
             );
-            stopWatch.stop();
 
             sendMessageDao.insert(sendMessageDto);
+            stopWatch.stop();
         }
 
         stopWatch.start("发送rpc消息");
