@@ -4,18 +4,20 @@ import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
 import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
-import com.ep.mqtt.server.db.dto.AsyncJobDto;
 import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.job.DispatchMessageParam;
-import com.ep.mqtt.server.metadata.*;
+import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.metadata.DisconnectReason;
+import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.ModelUtil;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -23,7 +25,10 @@ import org.springframework.util.CollectionUtils;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author zbz
@@ -135,33 +140,62 @@ public class CommonDeal {
             return;
         }
 
-        Long now = System.currentTimeMillis();
-        List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
+        /*
+            创建临时线程池
+            使用栅栏控制批量生成消息id
+            关闭线程池
+            加入本地队列
+         */
+
+        // TODO: 2025/4/3 多线程生成消息id
+        Map<String, Integer> messageIdMap = Maps.newConcurrentMap();
+        ThreadPoolExecutor messageIdThreadPool = new ThreadPoolExecutor(Constant.PROCESSOR_NUM, Constant.PROCESSOR_NUM * 2,
+                60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(clientQosMap.size()),
+                new ThreadFactoryBuilder().setNameFormat("gen-message-id-%s").build());
+        CountDownLatch countDownLatch = new CountDownLatch(clientQosMap.size());
         for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
-            genMessageIdAsyncJobDtoList.add(
-                    ModelUtil.buildAsyncJobDto(
-                            AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString()),
-                            AsyncJobBusinessType.GEN_MESSAGE_ID,
-                            now,
-                            0,
-                            AsyncJobStatus.READY,
-                            ModelUtil.buildGenMessageIdParam(
-                                    dispatchMessageParam.getReceiveQos(),
-                                    dispatchMessageParam.getReceivePacketId(),
-                                    dispatchMessageParam.getFromClientId(),
-                                    clientQosEntry.getValue().getCode() >= dispatchMessageParam.getReceiveQos().getCode() ?
-                                            dispatchMessageParam.getReceiveQos() : clientQosEntry.getValue(),
-                                    dispatchMessageParam.getTopic(),
-                                    clientQosEntry.getKey(),
-                                    dispatchMessageParam.getPayload(),
-                                    YesOrNo.NO,
-                                    dispatchMessageParam.getIsRetain()
-                            )
-                    )
-            );
+            messageIdThreadPool.submit(()->{
+                try {
+                    messageIdMap.put(clientQosEntry.getKey(), 1);
+                }
+                catch (Throwable e){
+
+                }
+                finally {
+                    countDownLatch.countDown();
+                }
+            });
         }
 
-        asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+
+        }
+        messageIdThreadPool.shutdown();;
+
+        // TODO: 2025/4/3 构建dto，加入本地队列
+        for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
+            ModelUtil.buildGenMessageIdParam(
+                    dispatchMessageParam.getReceiveQos(),
+                    dispatchMessageParam.getReceivePacketId(),
+                    dispatchMessageParam.getFromClientId(),
+                    clientQosEntry.getValue().getCode() >= dispatchMessageParam.getReceiveQos().getCode() ?
+                            dispatchMessageParam.getReceiveQos() : clientQosEntry.getValue(),
+                    dispatchMessageParam.getTopic(),
+                    clientQosEntry.getKey(),
+                    dispatchMessageParam.getPayload(),
+                    YesOrNo.NO,
+                    dispatchMessageParam.getIsRetain()
+            );
+
+
+
+        }
+
+
+
+
     }
 
 }

@@ -103,6 +103,7 @@ public class AsyncJobEngine {
     public class QueryJobRunnable implements Runnable {
         @Override
         public void run() {
+            // TODO: 2025/4/2 使用分布式锁控制并发，
             String id = UUID.randomUUID().toString();
             try {
                 long jobStart = System.currentTimeMillis();
