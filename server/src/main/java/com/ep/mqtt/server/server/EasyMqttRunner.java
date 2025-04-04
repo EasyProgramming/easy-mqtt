@@ -1,15 +1,19 @@
 package com.ep.mqtt.server.server;
 
-import com.ep.mqtt.server.job.AsyncJobEngine;
-import com.ep.mqtt.server.raft.server.EasyMqttRaftServeSwitch;
-import com.ep.mqtt.server.rpc.RpcServer;
-import lombok.extern.slf4j.Slf4j;
+import javax.annotation.Resource;
+
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import com.ep.mqtt.server.db.dao.SendMessageDao;
+import com.ep.mqtt.server.job.AsyncJobEngine;
+import com.ep.mqtt.server.queue.InsertSendMessageQueue;
+import com.ep.mqtt.server.raft.server.EasyMqttRaftServeSwitch;
+import com.ep.mqtt.server.rpc.RpcServer;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author zbz
@@ -31,11 +35,19 @@ public class EasyMqttRunner implements ApplicationRunner, DisposableBean {
     @Resource
     private RpcServer rpcServer;
 
+    @Resource
+    private SendMessageDao sendMessageDao;
+
+    private InsertSendMessageQueue insertSendMessageQueue;
+
     @Override
     public void run(ApplicationArguments args) {
         try {
             rpcServer.start(()->{
                 try {
+                    insertSendMessageQueue = new InsertSendMessageQueue(sendMessageDao);
+                    insertSendMessageQueue.start();
+
                     easyMqttRaftServeSwitch.start();
 
                     mqttServer.start();
@@ -60,6 +72,8 @@ public class EasyMqttRunner implements ApplicationRunner, DisposableBean {
             mqttServer.stop();
 
             easyMqttRaftServeSwitch.stop();
+
+            insertSendMessageQueue.stop();
 
             rpcServer.stop();
         }
