@@ -8,6 +8,7 @@ import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
 import com.ep.mqtt.server.metadata.AsyncJobStatus;
 import com.ep.mqtt.server.metadata.Qos;
 import com.ep.mqtt.server.metadata.YesOrNo;
+import com.ep.mqtt.server.rpc.transfer.SendMessage;
 
 /**
  * @author zbz
@@ -73,6 +74,19 @@ public class ModelUtil {
         sendMessageDto.setValidTime(validTime);
         sendMessageDto.setIsRetain(isRetain);
         return sendMessageDto;
+    }
+
+    public static SendMessage buildSendMessage(Qos sendQos, String topic, Integer sendPacketId, String toClientId, String payload, Boolean isDup, Boolean isRetain){
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setSendQos(sendQos);
+        sendMessage.setTopic(topic);
+        sendMessage.setToClientId(toClientId);
+        sendMessage.setPayload(payload);
+        sendMessage.setIsDup(isDup);
+        sendMessage.setIsRetain(isRetain);
+        sendMessage.setSendPacketId(sendPacketId);
+
+        return sendMessage;
     }
 
 }

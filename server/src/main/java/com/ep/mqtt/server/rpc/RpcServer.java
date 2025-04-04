@@ -22,7 +22,7 @@ public class RpcServer {
 
     private static RpcVerticle rpcVerticle;
 
-    private Vertx vertx;
+    private static Vertx vertx;
 
     @Resource
     private MqttServerProperties mqttServerProperties;
@@ -76,5 +76,9 @@ public class RpcServer {
 
     public static RpcVerticle getRpcVerticle() {
         return rpcVerticle;
+    }
+
+    public static Vertx getVertx() {
+        return vertx;
     }
 }
