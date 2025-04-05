@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class InsertSendMessageQueue {
 
+    public static int QUEUE_SIZE = 10000;
+
     private final static ReadWriteLockUtil LOCK = new ReadWriteLockUtil();
 
     /**
@@ -39,7 +41,7 @@ public class InsertSendMessageQueue {
     public static ThreadPoolExecutor BATCH_INSERT_SEND_MESSAGE_THREAD_POOL = new ThreadPoolExecutor(Constant.PROCESSOR_NUM, Constant.PROCESSOR_NUM,
         60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setNameFormat("batch-insert-send-message-%s").build());
 
-    public static ArrayBlockingQueue<SendMessageDto> QUEUE = new ArrayBlockingQueue<>(10000);
+    public static ArrayBlockingQueue<SendMessageDto> QUEUE = new ArrayBlockingQueue<>(QUEUE_SIZE);
 
     private Thread consumerThread;
 
@@ -56,6 +58,11 @@ public class InsertSendMessageQueue {
         consumerThread = new Thread(() -> {
             while (true) {
                 try {
+                    int currentQueueSize = InsertSendMessageQueue.QUEUE.size();
+                    if (InsertSendMessageQueue.QUEUE_SIZE * 0.8 < currentQueueSize){
+                        log.warn("队列剩余容量不足，当前容量：[{}]", currentQueueSize);
+                    }
+
                     SendMessageDto sendMessageDto = QUEUE.take();
                     if (sendMessageDto.getSendQos().equals(Qos.LEVEL_0)) {
                         send(sendMessageDto);
