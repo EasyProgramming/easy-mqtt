@@ -37,6 +37,8 @@ public class DataSourceConfig {
                 hikariDataSource = new HikariDataSource();
                 hikariDataSource.setJdbcUrl("jdbc:h2:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt");
                 hikariDataSource.setDriverClassName(DriverClass.H2.getCode());
+                hikariDataSource.setMaximumPoolSize(Constant.PROCESSOR_NUM * 10);
+                hikariDataSource.setIdleTimeout(Constant.PROCESSOR_NUM * 10);
                 break;
             case CLUSTER:
                 hikariDataSource = new HikariDataSource();
