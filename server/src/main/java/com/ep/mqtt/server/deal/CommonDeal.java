@@ -3,15 +3,15 @@ package com.ep.mqtt.server.deal;
 import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
 import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
-import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
-import com.ep.mqtt.server.job.AsyncJobManage;
 import com.ep.mqtt.server.job.DispatchMessageParam;
-import com.ep.mqtt.server.metadata.*;
+import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.metadata.DisconnectReason;
+import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.YesOrNo;
 import com.ep.mqtt.server.queue.InsertSendMessageQueue;
-import com.ep.mqtt.server.rpc.EasyMqttRpcClient;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.ModelUtil;
@@ -49,12 +49,6 @@ public class CommonDeal {
 
     @Resource
     private ReceiveQos2MessageDao receiveQos2MessageDao;
-
-    @Resource
-    private SendMessageDao sendMessageDao;
-
-    @Resource
-    private AsyncJobManage asyncJobManage;
 
     @Resource
     private ClientSubscribeDao subscribeDao;
@@ -179,29 +173,23 @@ public class CommonDeal {
 
             messageIdThreadPool.submit(()->{
                 try {
-                    EasyMqttRpcClient.distributedLock(DistributedLock.LOCK_CLIENT.getDistributedLockName(toClientId), ()-> {
-                        try {
-                            transactionUtil.transaction(()->{
-                                ClientDto clientDto = clientDao.selectByClientId(toClientId);
-                                if (clientDto == null){
-                                    return null;
-                                }
-
-                                long lastMessageIdProgress = clientDto.getMessageIdProgress() + 1L;
-                                clientDao.updateMessageIdProgress(clientDto.getClientId(), lastMessageIdProgress);
-
-                                sendMessageIdMap.put(clientQosEntry.getKey(), (int) (lastMessageIdProgress % 65535));
-                                return null;
-                            });
+                    transactionUtil.transaction(() -> {
+                        ClientDto clientDto = clientDao.lock(toClientId);
+                        if (clientDto == null) {
+                            return null;
                         }
-                        finally {
-                            countDownLatch.countDown();
-                        }
+
+                        long lastMessageIdProgress = clientDto.getMessageIdProgress() + 1L;
+                        clientDao.updateMessageIdProgress(clientDto.getClientId(), lastMessageIdProgress);
+
+                        sendMessageIdMap.put(clientQosEntry.getKey(), (int)(lastMessageIdProgress % 65535));
+                        return null;
                     });
                 }
                 catch (Throwable e){
                     log.error("生成消息id失败", e);
-
+                }
+                finally {
                     countDownLatch.countDown();
                 }
             });
@@ -213,7 +201,7 @@ public class CommonDeal {
             log.warn("中断生成消息id", e);
         }
 
-        messageIdThreadPool.shutdown();;
+        messageIdThreadPool.shutdown();
 
         for (SendMessageDto sendMessageDto : sendMessageDtoList){
             if (!sendMessageDto.getSendQos().equals(Qos.LEVEL_0)){

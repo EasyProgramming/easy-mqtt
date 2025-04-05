@@ -1,12 +1,5 @@
 package com.ep.mqtt.server.queue;
 
-import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.metadata.Constant;
@@ -18,9 +11,15 @@ import com.ep.mqtt.server.util.ModelUtil;
 import com.ep.mqtt.server.util.ReadWriteLockUtil;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author zbz
@@ -74,7 +73,7 @@ public class InsertSendMessageQueue {
                         doInsert(sendMessageDao);
                     });
                 } catch (InterruptedException e) {
-                    log.warn("插入发送消息队列被打断", e);
+                    log.warn("插入发送消息队列被打断");
                     return;
                 } catch (Throwable throwable) {
                     log.warn("插入发送消息队列异常", throwable);
