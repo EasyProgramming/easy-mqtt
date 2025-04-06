@@ -166,12 +166,13 @@ public class CommonDeal {
                 dispatchMessageParam.getFromClientId(), sendQos, dispatchMessageParam.getTopic(), null, toClientId, dispatchMessageParam.getPayload(),
                 YesOrNo.NO, now + 1000L * 60 * 60 * 24 * 7, dispatchMessageParam.getIsRetain()));
 
-            if (sendQos.equals(Qos.LEVEL_0)){
-                continue;
-            }
 
             messageIdThreadPool.submit(()->{
                 try {
+                    if (sendQos.equals(Qos.LEVEL_0)){
+                        return;
+                    }
+
                     Integer messageId = messageIdDeal.genMessageId(toClientId);
                     if (messageId == null){
                         return;
@@ -196,19 +197,7 @@ public class CommonDeal {
 
         messageIdThreadPool.shutdown();
 
-        for (SendMessageDto sendMessageDto : sendMessageDtoList){
-            if (!sendMessageDto.getSendQos().equals(Qos.LEVEL_0)){
-                Integer sendPacketId = sendMessageIdMap.get(sendMessageDto.getToClientId());
-
-                if (sendPacketId == null){
-                    continue;
-                }
-
-                sendMessageDto.setSendPacketId(sendPacketId);
-            }
-
-            InsertSendMessageQueue.QUEUE.add(sendMessageDto);
-        }
+        InsertSendMessageQueue.add(sendMessageDtoList, sendMessageIdMap);
     }
 
 }

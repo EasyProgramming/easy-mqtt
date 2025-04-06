@@ -5,9 +5,17 @@ import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.ClientSubscribeDao;
 import com.ep.mqtt.server.db.dao.ReceiveQos2MessageDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
-import com.ep.mqtt.server.db.dto.*;
-import com.ep.mqtt.server.job.AsyncJobManage;
-import com.ep.mqtt.server.metadata.*;
+import com.ep.mqtt.server.db.dto.ClientDto;
+import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
+import com.ep.mqtt.server.db.dto.ReceiveQos2MessageDto;
+import com.ep.mqtt.server.db.dto.SendMessageDto;
+import com.ep.mqtt.server.metadata.BaseEnum;
+import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.metadata.DisconnectReason;
+import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.RaftCommand;
+import com.ep.mqtt.server.metadata.YesOrNo;
+import com.ep.mqtt.server.queue.InsertSendMessageQueue;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.AddRetainMessage;
 import com.ep.mqtt.server.raft.transfer.AddTopicFilter;
@@ -16,7 +24,12 @@ import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.RetainMessageStore;
-import com.ep.mqtt.server.util.*;
+import com.ep.mqtt.server.util.HttpUtil;
+import com.ep.mqtt.server.util.JsonUtil;
+import com.ep.mqtt.server.util.ModelUtil;
+import com.ep.mqtt.server.util.MqttUtil;
+import com.ep.mqtt.server.util.NettyUtil;
+import com.ep.mqtt.server.util.TransactionUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -35,7 +48,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -71,13 +87,13 @@ public class InboundDeal {
     private SendMessageDao sendMessageDao;
 
     @Resource
-    private AsyncJobManage asyncJobManage;
-
-    @Resource
     private TransactionUtil transactionUtil;
 
     @Resource
     private CommonDeal commonDeal;
+
+    @Resource
+    private MessageIdDeal messageIdDeal;
 
     public boolean authentication(MqttConnectMessage mqttConnectMessage) {
         if (StringUtils.isBlank(mqttServerProperties.getAuthenticationUrl())) {
@@ -202,40 +218,34 @@ public class InboundDeal {
     }
 
     private void dealRetainMessage(String clientId, Date now, Map<String, Qos> editTopicFilterMap){
-        List<AsyncJobDto> genMessageIdAsyncJobDtoList = Lists.newArrayList();
-
         for (Map.Entry<String, Qos> entry : editTopicFilterMap.entrySet()) {
             List<RetainMessageStore.RetainMessage> retainMessageList = RetainMessageStore.matchRetainMessage(entry.getKey());
             if (CollectionUtils.isEmpty(retainMessageList)){
                 continue;
             }
 
+            List<SendMessageDto> sendMessageDtoList = Lists.newArrayList();
+            Map<String, Integer> sendMessageIdMap = Maps.newHashMap();
             for (RetainMessageStore.RetainMessage retainMessage : retainMessageList){
-                genMessageIdAsyncJobDtoList.add(
-                        ModelUtil.buildAsyncJobDto(
-                                AsyncJobBusinessType.GEN_MESSAGE_ID.getBusinessId(UUID.randomUUID().toString()),
-                                AsyncJobBusinessType.GEN_MESSAGE_ID,
-                                now.getTime(),
-                                0,
-                                AsyncJobStatus.READY,
-                                ModelUtil.buildGenMessageIdParam(
-                                        retainMessage.getReceiveQos(),
-                                        retainMessage.getReceivePacketId(),
-                                        retainMessage.getFromClientId(),
-                                        entry.getValue().getCode() >= retainMessage.getReceiveQos().getCode() ? retainMessage.getReceiveQos() : entry.getValue(),
-                                        retainMessage.getTopic(),
-                                        clientId,
-                                        retainMessage.getPayload(),
-                                        YesOrNo.NO,
-                                        YesOrNo.YES
-                                )
-                        )
-                );
-            }
-        }
+                Qos sendQos = entry.getValue().getCode() >= retainMessage.getReceiveQos().getCode() ? retainMessage.getReceiveQos() : entry.getValue();
 
-        if (!CollectionUtils.isEmpty(genMessageIdAsyncJobDtoList)){
-            asyncJobManage.addJob(genMessageIdAsyncJobDtoList);
+                sendMessageDtoList.add(ModelUtil.buildSendMessageDto(retainMessage.getReceiveQos(), retainMessage.getReceivePacketId(),
+                        retainMessage.getFromClientId(), sendQos, retainMessage.getTopic(), null, clientId, retainMessage.getPayload(),
+                        YesOrNo.NO, now.getTime() + 1000L * 60 * 60 * 24 * 7, YesOrNo.YES));
+
+                if (sendQos.equals(Qos.LEVEL_0)){
+                    continue;
+                }
+
+                Integer messageId = messageIdDeal.genMessageId(clientId);
+                if (messageId == null){
+                    continue;
+                }
+
+                sendMessageIdMap.put(clientId, messageId);
+            }
+
+            InsertSendMessageQueue.add(sendMessageDtoList, sendMessageIdMap);
         }
     }
 
@@ -357,10 +367,6 @@ public class InboundDeal {
 
         commonDeal.dispatchMessage(ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload,
                 isRetain));
-//        asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
-//            AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos, topic, receivePacketId, fromClientId, payload,
-//                        isRetain), now);
-
         if (Qos.LEVEL_0 == receiveQos) {
             return;
         }
@@ -376,11 +382,6 @@ public class InboundDeal {
                 commonDeal.dispatchMessage(ModelUtil.buildDispatchMessageParam(receiveQos2MessageDto.getReceiveQos(),
                         receiveQos2MessageDto.getTopic(), receiveQos2MessageDto.getReceivePacketId(),
                         receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload(), receiveQos2MessageDto.getIsRetain()));
-//                asyncJobManage.addJob(AsyncJobBusinessType.DISPATCH_MESSAGE.getBusinessId(UUID.randomUUID().toString()),
-//                    AsyncJobBusinessType.DISPATCH_MESSAGE, ModelUtil.buildDispatchMessageParam(receiveQos2MessageDto.getReceiveQos(),
-//                                receiveQos2MessageDto.getTopic(), receiveQos2MessageDto.getReceivePacketId(),
-//                                receiveQos2MessageDto.getFromClientId(), receiveQos2MessageDto.getPayload(), receiveQos2MessageDto.getIsRetain()),
-//                        new Date());
             }
         }
 

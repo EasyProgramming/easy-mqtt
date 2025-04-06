@@ -15,6 +15,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -106,6 +107,22 @@ public class InsertSendMessageQueue {
         AUTO_INSERT_THREAD_POOL.shutdown();
 
         BATCH_INSERT_SEND_MESSAGE_THREAD_POOL.shutdown();
+    }
+
+    public static void add(List<SendMessageDto> sendMessageDtoList, Map<String, Integer> sendMessageIdMap){
+        for (SendMessageDto sendMessageDto : sendMessageDtoList){
+            if (!sendMessageDto.getSendQos().equals(Qos.LEVEL_0)){
+                Integer sendPacketId = sendMessageIdMap.get(sendMessageDto.getToClientId());
+
+                if (sendPacketId == null){
+                    continue;
+                }
+
+                sendMessageDto.setSendPacketId(sendPacketId);
+            }
+
+            QUEUE.add(sendMessageDto);
+        }
     }
 
     public static class AutoInsertSendMessageRunnable implements Runnable {
