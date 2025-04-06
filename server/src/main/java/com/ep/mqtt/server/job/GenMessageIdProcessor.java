@@ -3,9 +3,13 @@ package com.ep.mqtt.server.job;
 import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.db.dto.AsyncJobDto;
-import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
-import com.ep.mqtt.server.metadata.*;
+import com.ep.mqtt.server.deal.MessageIdDeal;
+import com.ep.mqtt.server.metadata.AsyncJobBusinessType;
+import com.ep.mqtt.server.metadata.AsyncJobExecuteResult;
+import com.ep.mqtt.server.metadata.Constant;
+import com.ep.mqtt.server.metadata.Qos;
+import com.ep.mqtt.server.metadata.RpcCommand;
 import com.ep.mqtt.server.rpc.EasyMqttRpcClient;
 import com.ep.mqtt.server.rpc.transfer.SendMessage;
 import com.ep.mqtt.server.util.ModelUtil;
@@ -13,6 +17,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
@@ -34,6 +40,9 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
     @Resource
     private ClientDao clientDao;
 
+    @Resource
+    private MessageIdDeal messageIdDeal;
+
     public GenMessageIdProcessor() {
         super(new ThreadPoolExecutor(Constant.PROCESSOR_NUM * 8, Constant.PROCESSOR_NUM * 8, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("gen-message-id-%s").build()));
@@ -42,14 +51,6 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
     @Override
     public AsyncJobExecuteResult process(AsyncJobDto asyncJobDto, GenMessageIdParam jobParam) {
         StopWatch stopWatch = new StopWatch("生成消息id");
-
-        stopWatch.start("对客户端加锁");
-        ClientDto clientDto = clientDao.lock(jobParam.getToClientId());
-        stopWatch.stop();
-        if (clientDto == null){
-            log.info(stopWatch.prettyPrint());
-            return AsyncJobExecuteResult.SUCCESS;
-        }
 
         SendMessage sendMessage = new SendMessage();
         sendMessage.setSendQos(jobParam.getSendQos());
@@ -60,12 +61,13 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
         sendMessage.setIsRetain(jobParam.getIsRetain().getBoolean());
 
         if (jobParam.getSendQos() != Qos.LEVEL_0) {
-            stopWatch.start("id自增");
-            long lastMessageIdProgress = clientDto.getMessageIdProgress() + 1L;
-            clientDao.updateMessageIdProgress(clientDto.getClientId(), lastMessageIdProgress);
-            int messageId = (int) (lastMessageIdProgress % 65535);
+            stopWatch.start("生成id");
+            Integer messageId = messageIdDeal.genMessageId(jobParam.getToClientId());
             stopWatch.stop();
-
+            if (messageId == null){
+                log.info(stopWatch.prettyPrint());
+                return AsyncJobExecuteResult.SUCCESS;
+            }
             sendMessage.setSendPacketId(messageId);
 
             stopWatch.start("插入数据库");
@@ -87,11 +89,14 @@ public class GenMessageIdProcessor extends AbstractJobProcessor<GenMessageIdPara
             stopWatch.stop();
         }
 
-        stopWatch.start("发送rpc消息");
-        EasyMqttRpcClient.broadcast(RpcCommand.SEND_MESSAGE, sendMessage);
-        stopWatch.stop();
-
         log.info(stopWatch.prettyPrint());
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                EasyMqttRpcClient.broadcast(RpcCommand.SEND_MESSAGE, sendMessage);
+            }
+        });
         return AsyncJobExecuteResult.SUCCESS;
     }
 
