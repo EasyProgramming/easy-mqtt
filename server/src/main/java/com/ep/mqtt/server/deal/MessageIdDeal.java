@@ -79,7 +79,7 @@ public class MessageIdDeal {
 
         private Long maxId;
 
-        private Integer size = 2000;
+        private Integer size = 100;
 
     }
 }
