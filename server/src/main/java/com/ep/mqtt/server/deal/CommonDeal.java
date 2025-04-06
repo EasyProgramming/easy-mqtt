@@ -15,7 +15,6 @@ import com.ep.mqtt.server.queue.InsertSendMessageQueue;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.store.TopicFilterStore;
 import com.ep.mqtt.server.util.ModelUtil;
-import com.ep.mqtt.server.util.TransactionUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -54,7 +53,7 @@ public class CommonDeal {
     private ClientSubscribeDao subscribeDao;
 
     @Resource
-    private TransactionUtil transactionUtil;
+    private MessageIdDeal messageIdDeal;
 
     @Transactional(rollbackFor = Exception.class)
     public void clearClientData(String clientId) {
@@ -173,18 +172,12 @@ public class CommonDeal {
 
             messageIdThreadPool.submit(()->{
                 try {
-                    transactionUtil.transaction(() -> {
-                        ClientDto clientDto = clientDao.lock(toClientId);
-                        if (clientDto == null) {
-                            return null;
-                        }
+                    Integer messageId = messageIdDeal.genMessageId(toClientId);
+                    if (messageId == null){
+                        return;
+                    }
 
-                        long lastMessageIdProgress = clientDto.getMessageIdProgress() + 1L;
-                        clientDao.updateMessageIdProgress(clientDto.getClientId(), lastMessageIdProgress);
-
-                        sendMessageIdMap.put(clientQosEntry.getKey(), (int)(lastMessageIdProgress % 65535));
-                        return null;
-                    });
+                    sendMessageIdMap.put(clientQosEntry.getKey(), messageId);
                 }
                 catch (Throwable e){
                     log.error("生成消息id失败", e);
@@ -217,4 +210,5 @@ public class CommonDeal {
             InsertSendMessageQueue.QUEUE.add(sendMessageDto);
         }
     }
+
 }
