@@ -1,5 +1,6 @@
 package com.ep.mqtt.server.session;
 
+import com.ep.mqtt.server.deal.MessageIdDeal;
 import com.ep.mqtt.server.metadata.DisconnectReason;
 import com.ep.mqtt.server.util.NettyUtil;
 import com.google.common.collect.Maps;
@@ -38,6 +39,8 @@ public class SessionManager {
     public static void unbind(String clientId, String sessionId) {
         synchronized (clientId.intern()){
             SESSION_MAP_2.remove(sessionId);
+
+            MessageIdDeal.remove(clientId);
 
             Session existSession = SESSION_MAP.get(clientId);
             if (existSession == null){

@@ -1,7 +1,6 @@
 package com.ep.mqtt.server.handler;
 
 import com.ep.mqtt.server.deal.CommonDeal;
-import com.ep.mqtt.server.deal.MessageIdDeal;
 import com.ep.mqtt.server.metadata.DisconnectReason;
 import com.ep.mqtt.server.processor.AbstractMqttProcessor;
 import com.ep.mqtt.server.session.Session;
@@ -89,8 +88,6 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
         }
 
         SessionManager.unbind(clientId, sessionId);
-
-        MessageIdDeal.remove(clientId);
 
         commonDeal.afterDisconnect(disconnectReason, session);
     }
