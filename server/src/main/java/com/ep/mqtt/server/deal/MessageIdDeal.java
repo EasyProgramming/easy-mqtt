@@ -42,22 +42,22 @@ public class MessageIdDeal {
      */
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public Integer genMessageId(String clientId){
-        ClientDto clientDto = clientDao.lock(clientId);
-        if (clientDto == null) {
-            return null;
-        }
-
         synchronized (LocalLock.LOCK_CLIENT.getLocalLockName(clientId)){
             IdProgress idProgress = MESSAGE_ID_CACHE.getIfPresent(clientId);
             if (idProgress == null){
                 idProgress = new IdProgress();
-                idProgress.setCurrentId(clientDto.getMessageIdProgress());
-                idProgress.setMaxId(clientDto.getMessageIdProgress());
+                idProgress.setCurrentId(0L);
+                idProgress.setMaxId(0L);
 
                 MESSAGE_ID_CACHE.put(clientId, idProgress);
             }
 
             if (idProgress.getCurrentId() >= idProgress.getMaxId()){
+                ClientDto clientDto = clientDao.lock(clientId);
+                if (clientDto == null) {
+                    return null;
+                }
+
                 Long newMaxId = idProgress.getMaxId() + idProgress.getSize();
 
                 idProgress.setMaxId(newMaxId);
