@@ -1,25 +1,25 @@
 package com.ep.mqtt.server.server;
 
-import javax.annotation.Resource;
-
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.stereotype.Component;
-
 import com.ep.mqtt.server.db.dao.SendMessageDao;
 import com.ep.mqtt.server.job.AsyncJobEngine;
 import com.ep.mqtt.server.queue.InsertSendMessageQueue;
 import com.ep.mqtt.server.raft.server.EasyMqttRaftServeSwitch;
 import com.ep.mqtt.server.rpc.RpcServer;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
 
 /**
  * @author zbz
  * @date 2025/3/13 16:49
  */
 @Slf4j
+@DependsOn("dataSource")
 @Component
 public class EasyMqttRunner implements ApplicationRunner, DisposableBean {
 

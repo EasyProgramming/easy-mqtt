@@ -35,7 +35,7 @@ public class DataSourceConfig {
         switch (runMode){
             case STANDALONE:
                 hikariDataSource = new HikariDataSource();
-                hikariDataSource.setJdbcUrl("jdbc:h2:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt");
+                hikariDataSource.setJdbcUrl("jdbc:h2:" + Constant.PROJECT_BASE_DIR + "/database/easy-mqtt;DB_CLOSE_ON_EXIT=FALSE");
                 hikariDataSource.setDriverClassName(DriverClass.H2.getCode());
                 hikariDataSource.setMaximumPoolSize(Constant.PROCESSOR_NUM * 10);
                 hikariDataSource.setIdleTimeout(Constant.PROCESSOR_NUM * 10);
