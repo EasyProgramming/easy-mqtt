@@ -9,6 +9,7 @@ import com.google.common.cache.CacheBuilder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
@@ -39,7 +40,7 @@ public class MessageIdDeal {
      * @param clientId 客户端信息
      * @return 消息id
      */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public Integer genMessageId(String clientId){
         ClientDto clientDto = clientDao.lock(clientId);
         if (clientDto == null) {

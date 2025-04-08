@@ -7,7 +7,6 @@ import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.job.DispatchMessageParam;
-import com.ep.mqtt.server.metadata.Constant;
 import com.ep.mqtt.server.metadata.DisconnectReason;
 import com.ep.mqtt.server.metadata.Qos;
 import com.ep.mqtt.server.metadata.YesOrNo;
@@ -18,7 +17,6 @@ import com.ep.mqtt.server.util.ModelUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,10 +25,6 @@ import org.springframework.util.CollectionUtils;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author zbz
@@ -154,9 +148,6 @@ public class CommonDeal {
         long now = System.currentTimeMillis();
         List<SendMessageDto> sendMessageDtoList = Lists.newArrayList();
         Map<String, Integer> sendMessageIdMap = Maps.newConcurrentMap();
-        ThreadPoolExecutor messageIdThreadPool = new ThreadPoolExecutor(Constant.PROCESSOR_NUM, Constant.PROCESSOR_NUM * 2,
-                60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(clientQosMap.size()), new ThreadFactoryBuilder().setNameFormat("gen-message-id-%s").build());
-        CountDownLatch countDownLatch = new CountDownLatch(clientQosMap.size());
         for (Map.Entry<String, Qos> clientQosEntry : clientQosMap.entrySet()){
             String toClientId = clientQosEntry.getKey();
             Qos sendQos = clientQosEntry.getValue().getCode() >= dispatchMessageParam.getReceiveQos().getCode() ?
@@ -166,36 +157,17 @@ public class CommonDeal {
                 dispatchMessageParam.getFromClientId(), sendQos, dispatchMessageParam.getTopic(), null, toClientId, dispatchMessageParam.getPayload(),
                 YesOrNo.NO, now + 1000L * 60 * 60 * 24 * 7, dispatchMessageParam.getIsRetain()));
 
+            if (sendQos.equals(Qos.LEVEL_0)){
+                continue;
+            }
 
-            messageIdThreadPool.submit(()->{
-                try {
-                    if (sendQos.equals(Qos.LEVEL_0)){
-                        return;
-                    }
+            Integer messageId = messageIdDeal.genMessageId(toClientId);
+            if (messageId == null){
+                continue;
+            }
 
-                    Integer messageId = messageIdDeal.genMessageId(toClientId);
-                    if (messageId == null){
-                        return;
-                    }
-
-                    sendMessageIdMap.put(clientQosEntry.getKey(), messageId);
-                }
-                catch (Throwable e){
-                    log.error("生成消息id失败", e);
-                }
-                finally {
-                    countDownLatch.countDown();
-                }
-            });
+            sendMessageIdMap.put(clientQosEntry.getKey(), messageId);
         }
-
-        try {
-            countDownLatch.await();
-        } catch (InterruptedException e) {
-            log.warn("中断生成消息id", e);
-        }
-
-        messageIdThreadPool.shutdown();
 
         InsertSendMessageQueue.add(sendMessageDtoList, sendMessageIdMap);
     }
