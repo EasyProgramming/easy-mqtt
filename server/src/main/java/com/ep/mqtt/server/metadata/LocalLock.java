@@ -4,7 +4,7 @@ package com.ep.mqtt.server.metadata;
  * @author : zbz
  * @date : 2025/4/4
  */
-public enum DistributedLock implements BaseEnum<String>{
+public enum LocalLock implements BaseEnum<String>{
     /**
      * 加锁客户端
      */
@@ -16,7 +16,7 @@ public enum DistributedLock implements BaseEnum<String>{
 
     private final String desc;
 
-    DistributedLock(String code, String desc){
+    LocalLock(String code, String desc){
         this.code = code;
         this.desc = desc;
     }
@@ -31,7 +31,7 @@ public enum DistributedLock implements BaseEnum<String>{
         return desc;
     }
 
-    public String getDistributedLockName(Object... values) {
-        return String.format(this.code, values);
+    public String getLocalLockName(Object... values) {
+        return String.format(this.code, values).intern();
     }
 }

@@ -2,6 +2,7 @@ package com.ep.mqtt.server.session;
 
 import com.ep.mqtt.server.deal.MessageIdDeal;
 import com.ep.mqtt.server.metadata.DisconnectReason;
+import com.ep.mqtt.server.metadata.LocalLock;
 import com.ep.mqtt.server.util.NettyUtil;
 import com.google.common.collect.Maps;
 
@@ -18,7 +19,7 @@ public class SessionManager {
     private static final Map<String, Session> SESSION_MAP_2 = Maps.newConcurrentMap();
 
     public static void bind(String clientId, Session session) {
-        synchronized (clientId.intern()){
+        synchronized (LocalLock.LOCK_CLIENT.getLocalLockName(clientId)){
             Session existSession = SESSION_MAP.get(clientId);
 
             if (existSession != null && !existSession.getSessionId().equals(session.getSessionId())){
@@ -37,7 +38,7 @@ public class SessionManager {
     }
 
     public static void unbind(String clientId, String sessionId) {
-        synchronized (clientId.intern()){
+        synchronized (LocalLock.LOCK_CLIENT.getLocalLockName(clientId)){
             SESSION_MAP_2.remove(sessionId);
 
             MessageIdDeal.remove(clientId);

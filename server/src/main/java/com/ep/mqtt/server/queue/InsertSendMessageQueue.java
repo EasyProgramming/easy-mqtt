@@ -16,11 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * @author zbz
@@ -29,7 +25,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class InsertSendMessageQueue {
 
-    public static int QUEUE_SIZE = 10000;
+    public static int QUEUE_SIZE = 50000;
+
+    public static int BATCH_INSERT_SIZE = 2000;
 
     private final static ReadWriteLockUtil LOCK = new ReadWriteLockUtil();
 
@@ -74,7 +72,7 @@ public class InsertSendMessageQueue {
                     LOCK.writeLock(() -> {
                         DataManage.add(sendMessageDto);
 
-                        if (DataManage.size() < 1000) {
+                        if (DataManage.size() < BATCH_INSERT_SIZE) {
                             return;
                         }
 
