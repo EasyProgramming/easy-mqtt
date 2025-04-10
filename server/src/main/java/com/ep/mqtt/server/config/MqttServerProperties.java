@@ -31,9 +31,9 @@ public class MqttServerProperties {
     private WebSocket webSocket;
 
     /**
-     * tcp端口（mqtt协议的端口）
+     * mqtt端口
      */
-    private Integer tcpPort = 8081;
+    private Integer mqttPort = 8081;
 
     /**
      * raft端口

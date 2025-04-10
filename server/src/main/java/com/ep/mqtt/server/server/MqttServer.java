@@ -124,7 +124,7 @@ public class MqttServer {
                         new MqttMessageHandler(abstractMqttProcessorList, commonDeal));
                 }
             });
-        tcpChannel = sb.bind(mqttServerProperties.getTcpPort()).sync().channel();
+        tcpChannel = sb.bind(mqttServerProperties.getMqttPort()).sync().channel();
     }
 
     private void websocketServer() throws Exception {
