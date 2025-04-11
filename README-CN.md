@@ -1,7 +1,7 @@
 English | [简体中文](./README-CN.md)
 
 # 💎 Easy MQTT
-一款简单、实用、高性能的`MQTT`服务器
+一款简单、实用的`MQTT`服务器
 
 ## 🎯目标
 让一切保持简单
@@ -22,6 +22,13 @@ English | [简体中文](./README-CN.md)
 ```shell script
 sh bin/start.sh -c conf/conf.yml
 ```
+
+## 📖文档
+- [必要参数说明](./doc/必要参数说明.md)
+- [集群部署示例](./doc/集群部署示例.md)
+- [开启鉴权](./doc/开启鉴权.md)
+- [开启ssl](./doc/开启ssl.md)
+- [开启websocket](./doc/开启websocket.md)
 
 ## 开源许可
 详见 [LICENSE](./LICENSE)
