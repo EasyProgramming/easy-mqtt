@@ -150,7 +150,7 @@ public class MqttServer {
                     // 将HTTP消息进行压缩编码
                     channelPipeline.addLast("compressor ", new HttpContentCompressor());
                     channelPipeline.addLast("protocol", new WebSocketServerProtocolHandler(
-                        mqttServerProperties.getWebSocket().getWebsocketPath(), "mqtt,mqttv3.1,mqttv3.1.1", true, 65536));
+                        mqttServerProperties.getWebSocket().getWebSocketPath(), "mqtt,mqttv3.1,mqttv3.1.1", true, 65536));
                     channelPipeline.addLast("mqttWebSocketCodec", new MqttWebSocketCodec());
                     channelPipeline.addLast("mqttDecoder", new MqttDecoder());
                     channelPipeline.addLast("mqttEncoder", MqttEncoder.INSTANCE);
@@ -158,7 +158,7 @@ public class MqttServer {
                         new MqttMessageHandler(abstractMqttProcessorList, commonDeal));
                 }
             });
-        websocketChannel = sb.bind(mqttServerProperties.getWebSocket().getWebsocketPort()).sync().channel();
+        websocketChannel = sb.bind(mqttServerProperties.getWebSocket().getWebSocketPort()).sync().channel();
     }
 
     private void configSsl(SocketChannel socketChannel, ChannelPipeline channelPipeline) {

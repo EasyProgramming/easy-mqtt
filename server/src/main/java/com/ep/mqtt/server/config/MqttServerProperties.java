@@ -114,11 +114,11 @@ public class MqttServerProperties {
         /**
          * websocket端口
          */
-        private Integer websocketPort = 8084;
+        private Integer webSocketPort;
 
         /**
          * websocket连接地址
          */
-        private String websocketPath = "/websocket";
+        private String webSocketPath;
     }
 }
