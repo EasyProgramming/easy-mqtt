@@ -9,12 +9,7 @@ import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.db.dto.ClientSubscribeDto;
 import com.ep.mqtt.server.db.dto.ReceiveQos2MessageDto;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
-import com.ep.mqtt.server.metadata.BaseEnum;
-import com.ep.mqtt.server.metadata.Constant;
-import com.ep.mqtt.server.metadata.DisconnectReason;
-import com.ep.mqtt.server.metadata.Qos;
-import com.ep.mqtt.server.metadata.RaftCommand;
-import com.ep.mqtt.server.metadata.YesOrNo;
+import com.ep.mqtt.server.metadata.*;
 import com.ep.mqtt.server.queue.InsertSendMessageQueue;
 import com.ep.mqtt.server.raft.client.EasyMqttRaftClient;
 import com.ep.mqtt.server.raft.transfer.AddRetainMessage;
@@ -24,12 +19,7 @@ import com.ep.mqtt.server.raft.transfer.TransferData;
 import com.ep.mqtt.server.session.Session;
 import com.ep.mqtt.server.session.SessionManager;
 import com.ep.mqtt.server.store.RetainMessageStore;
-import com.ep.mqtt.server.util.HttpUtil;
-import com.ep.mqtt.server.util.JsonUtil;
-import com.ep.mqtt.server.util.ModelUtil;
-import com.ep.mqtt.server.util.MqttUtil;
-import com.ep.mqtt.server.util.NettyUtil;
-import com.ep.mqtt.server.util.TransactionUtil;
+import com.ep.mqtt.server.util.*;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -48,10 +38,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -110,31 +97,50 @@ public class InboundDeal {
         RETRY_SEND_MESSAGE_THREAD_POOL.submit(() -> {
             try {
                 transactionUtil.transaction(() -> {
-                    List<SendMessageDto> selectRetryMessageDtoList = sendMessageDao.selectRetryMessage(clientId);
-                    if (CollectionUtils.isEmpty(selectRetryMessageDtoList)) {
+                    List<SendMessageDto> retryMessageDtoList = sendMessageDao.selectRetryMessage(clientId);
+                    if (CollectionUtils.isEmpty(retryMessageDtoList)) {
                         return null;
                     }
 
-                    for (SendMessageDto selectRetryMessageDto : selectRetryMessageDtoList) {
-                        Session session = SessionManager.get(clientId);
-                        if (session == null) {
-                            return null;
+                    List<SendMessageDto> retryPubRelList = Lists.newArrayList();
+                    Map<Integer, SendMessageDto> retryPublishMap = Maps.newHashMap();
+                    for (SendMessageDto retryMessageDto : retryMessageDtoList){
+                        if (retryMessageDto.getSendQos() == Qos.LEVEL_2 && retryMessageDto.getIsReceivePubRec().getBoolean()){
+                            retryPubRelList.add(retryMessageDto);
                         }
-
-                        if (selectRetryMessageDto.getSendQos() == Qos.LEVEL_1) {
-                            MqttUtil.sendPublish(session.getChannelHandlerContext(), true, selectRetryMessageDto.getSendQos(),
-                                selectRetryMessageDto.getIsRetain().getBoolean(), selectRetryMessageDto.getTopic(),
-                                selectRetryMessageDto.getSendPacketId(), selectRetryMessageDto.getPayload());
-                        } else if (selectRetryMessageDto.getSendQos() == Qos.LEVEL_2) {
-                            if (selectRetryMessageDto.getIsReceivePubRec().getBoolean()) {
-                                MqttUtil.sendPubRel(session.getChannelHandlerContext(), selectRetryMessageDto.getSendPacketId());
-                            } else {
-                                MqttUtil.sendPublish(session.getChannelHandlerContext(), true, selectRetryMessageDto.getSendQos(),
-                                    selectRetryMessageDto.getIsRetain().getBoolean(), selectRetryMessageDto.getTopic(),
-                                    selectRetryMessageDto.getSendPacketId(), selectRetryMessageDto.getPayload());
+                        else {
+                            SendMessageDto temp = retryPublishMap.get(retryMessageDto.getSendPacketId());
+                            if (temp == null){
+                                retryPublishMap.put(retryMessageDto.getSendPacketId(), retryMessageDto);
                             }
-                        } else {
-                            log.warn("不应存在的数据,[{}]", JsonUtil.obj2String(selectRetryMessageDto));
+                            else {
+                                if (temp.getValidTime() > retryMessageDto.getValidTime()){
+                                    retryPublishMap.put(retryMessageDto.getSendPacketId(), retryMessageDto);
+                                }
+                            }
+                        }
+                    }
+
+                    Session session = SessionManager.get(clientId);
+                    if (session == null) {
+                        return null;
+                    }
+
+                    if (!CollectionUtils.isEmpty(retryPublishMap)){
+                        List<SendMessageDto> retryPublishList =
+                                retryPublishMap.values().stream().sorted(Comparator.comparing(SendMessageDto::getValidTime))
+                                        .collect(Collectors.toList());
+
+                        for (SendMessageDto retryPublish : retryPublishList){
+                            MqttUtil.sendPublish(session.getChannelHandlerContext(), true, retryPublish.getSendQos(),
+                                    retryPublish.getIsRetain().getBoolean(), retryPublish.getTopic(),
+                                    retryPublish.getSendPacketId(), retryPublish.getPayload());
+                        }
+                    }
+
+                    if (!CollectionUtils.isEmpty(retryPubRelList)){
+                        for (SendMessageDto retryPubRel : retryPubRelList){
+                            MqttUtil.sendPubRel(session.getChannelHandlerContext(), retryPubRel.getSendPacketId());
                         }
                     }
 
@@ -263,12 +269,29 @@ public class InboundDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public void pubAck(String clientId, Integer messageId) {
-        sendMessageDao.deleteAtLeastOnceMessage(clientId, messageId);
+        List<SendMessageDto> sendMessageDtoList = sendMessageDao.selectAtLeastOnceMessage(clientId, messageId);
+        if (CollectionUtils.isEmpty(sendMessageDtoList)){
+            return;
+        }
+
+        sendMessageDtoList =
+                sendMessageDtoList.stream().sorted(Comparator.comparing(SendMessageDto::getValidTime)).collect(Collectors.toList());
+
+        sendMessageDao.deleteById(sendMessageDtoList.get(0).getId());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void pubRec(ChannelHandlerContext channelHandlerContext, String clientId, Integer messageId) {
-        sendMessageDao.updateReceivePubRec(clientId, messageId);
+        List<SendMessageDto> sendMessageDtoList = sendMessageDao.selectUnReceivePubRec(clientId, messageId);
+        if (CollectionUtils.isEmpty(sendMessageDtoList)){
+            MqttUtil.sendPubRel(channelHandlerContext, messageId);
+            return;
+        }
+
+        sendMessageDtoList =
+                sendMessageDtoList.stream().sorted(Comparator.comparing(SendMessageDto::getValidTime)).collect(Collectors.toList());
+
+        sendMessageDao.updateReceivePubRec(sendMessageDtoList.get(0).getId());
 
         MqttUtil.sendPubRel(channelHandlerContext, messageId);
     }
@@ -396,7 +419,15 @@ public class InboundDeal {
 
     @Transactional(rollbackFor = Exception.class)
     public void pubComp(String clientId, Integer messageId) {
-        sendMessageDao.deleteExactlyOnceMessage(clientId, messageId);
+        List<SendMessageDto> sendMessageDtoList = sendMessageDao.selectExactlyOnceMessage(clientId, messageId);
+        if (CollectionUtils.isEmpty(sendMessageDtoList)) {
+            return;
+        }
+
+        sendMessageDtoList =
+                sendMessageDtoList.stream().sorted(Comparator.comparing(SendMessageDto::getValidTime)).collect(Collectors.toList());
+
+        sendMessageDao.deleteById(sendMessageDtoList.get(0).getId());
     }
 
     private void saveClientInfo(String clientId, boolean isCleanSession) {

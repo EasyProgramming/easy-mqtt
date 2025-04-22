@@ -1,12 +1,12 @@
 package com.ep.mqtt.server.db.dao;
 
-import java.util.List;
-
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.ep.mqtt.server.db.dto.SendMessageDto;
 import com.ep.mqtt.server.metadata.Qos;
 import com.ep.mqtt.server.metadata.YesOrNo;
+
+import java.util.List;
 
 /**
  * @author zbz
@@ -35,30 +35,46 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
     }
 
     /**
-     * 删除qos=1的消息
-     * 
+     * 查询qos=1的消息
+     *
      * @param toClientId
      *            客户端id
      * @param sendPacketId
      *            消息id
      */
-    default void deleteAtLeastOnceMessage(String toClientId, Integer sendPacketId) {
-        delete(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId)
-            .eq(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getSendQos, Qos.LEVEL_1));
+    default List<SendMessageDto> selectAtLeastOnceMessage(String toClientId, Integer sendPacketId) {
+        return selectList(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId)
+                .eq(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getSendQos, Qos.LEVEL_1));
     }
+
 
     /**
      * 更新已收到pubRec报文
      * 
+     * @param sendMessageId
+     *            发送消息id
+     */
+    default void updateReceivePubRec(Long sendMessageId) {
+        update(Wrappers.lambdaUpdate(SendMessageDto.class)
+                .set(SendMessageDto::getIsReceivePubRec, YesOrNo.YES)
+                .eq(SendMessageDto::getId, sendMessageId)
+                .eq(SendMessageDto::getIsReceivePubRec, YesOrNo.NO)
+        );
+    }
+
+    /**
+     * 查询未收到pubRec报文
+     *
      * @param toClientId
      *            客户端id
      * @param sendPacketId
      *            消息id
      */
-    default void updateReceivePubRec(String toClientId, Integer sendPacketId) {
-        update(Wrappers.lambdaUpdate(SendMessageDto.class).set(SendMessageDto::getIsReceivePubRec, YesOrNo.YES)
-            .eq(SendMessageDto::getToClientId, toClientId).eq(SendMessageDto::getSendPacketId, sendPacketId)
-            .eq(SendMessageDto::getSendQos, Qos.LEVEL_2));
+    default List<SendMessageDto> selectUnReceivePubRec(String toClientId, Integer sendPacketId) {
+        return selectList(Wrappers.lambdaQuery(SendMessageDto.class)
+                .eq(SendMessageDto::getToClientId, toClientId).eq(SendMessageDto::getSendPacketId, sendPacketId)
+                .eq(SendMessageDto::getIsReceivePubRec, YesOrNo.NO)
+                .eq(SendMessageDto::getSendQos, Qos.LEVEL_2));
     }
 
     /**
@@ -82,6 +98,21 @@ public interface SendMessageDao extends BaseMapper<SendMessageDto> {
      */
     default void deleteExactlyOnceMessage(String toClientId, Integer sendPacketId) {
         delete(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId)
-            .eq(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getSendQos, Qos.LEVEL_2));
+                .eq(SendMessageDto::getIsReceivePubRec, YesOrNo.YES)
+                .eq(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getSendQos, Qos.LEVEL_2));
+    }
+
+    /**
+     * 查询qos=2的消息
+     *
+     * @param toClientId
+     *            客户端id
+     * @param sendPacketId
+     *            消息id
+     */
+    default List<SendMessageDto> selectExactlyOnceMessage(String toClientId, Integer sendPacketId) {
+        return selectList(Wrappers.lambdaQuery(SendMessageDto.class).eq(SendMessageDto::getToClientId, toClientId)
+                .eq(SendMessageDto::getIsReceivePubRec, YesOrNo.YES)
+                .eq(SendMessageDto::getSendPacketId, sendPacketId).eq(SendMessageDto::getSendQos, Qos.LEVEL_2));
     }
 }
