@@ -96,7 +96,7 @@ CREATE TABLE "send_message"
     "from_client_id"     text    NOT NULL,
     "send_qos"           integer NOT NULL,
     "topic"              text    NOT NULL,
-    "send_packet_id"     integer NULL,
+    "send_packet_id"     integer NOT NULL,
     "to_client_id"       text    NOT NULL,
     "payload"            text    NOT NULL,
     "is_receive_pub_rec" text    NOT NULL,
@@ -171,7 +171,9 @@ CREATE INDEX "retain_message_index_1"
 CREATE INDEX "send_message_index_1"
     ON "send_message" (
                        "to_client_id" ASC,
-                       "send_packet_id" ASC
+                       "send_packet_id" ASC,
+                       "send_qos" ASC,
+                       "is_receive_pub_rec" ASC
         );
 CREATE INDEX "send_message_index_2"
     ON "send_message" (

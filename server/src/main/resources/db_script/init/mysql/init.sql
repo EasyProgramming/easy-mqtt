@@ -95,14 +95,14 @@ CREATE TABLE `send_message`  (
                                  `from_client_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                  `send_qos` int NOT NULL,
                                  `topic` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-                                 `send_packet_id` int NULL DEFAULT NULL,
+                                 `send_packet_id` int NOT NULL,
                                  `to_client_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                  `payload` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                  `is_receive_pub_rec` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                  `valid_time` bigint NOT NULL,
                                  `is_retain` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
                                  PRIMARY KEY (`id`) USING BTREE,
-                                 INDEX `index_1`(`to_client_id`, `send_packet_id`) USING BTREE,
+                                 INDEX `index_1`(`to_client_id`, `send_packet_id`, `send_qos`, `is_receive_pub_rec`) USING BTREE,
   INDEX `index_2`(`topic`) USING BTREE,
   INDEX `index_3`(`valid_time`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;

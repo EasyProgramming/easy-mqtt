@@ -122,7 +122,7 @@ create table SEND_MESSAGE
     FROM_CLIENT_ID     VARCHAR not null,
     SEND_QOS           INT     not null,
     TOPIC              VARCHAR not null,
-    SEND_PACKET_ID     INT,
+    SEND_PACKET_ID     INT     not null,
     TO_CLIENT_ID       VARCHAR not null,
     PAYLOAD            VARCHAR not null,
     IS_RECEIVE_PUB_REC VARCHAR not null,
@@ -133,7 +133,7 @@ create table SEND_MESSAGE
 );
 
 create index SEND_MESSAGE_INDEX_1
-    on SEND_MESSAGE (TO_CLIENT_ID, SEND_PACKET_ID);
+    on SEND_MESSAGE (TO_CLIENT_ID, SEND_PACKET_ID, SEND_QOS, IS_RECEIVE_PUB_REC);
 
 create index SEND_MESSAGE_INDEX_2
     on SEND_MESSAGE (TOPIC);
