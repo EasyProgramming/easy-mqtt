@@ -20,9 +20,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
@@ -40,14 +38,6 @@ public class AsyncJobEngine {
      */
     private static final ScheduledThreadPoolExecutor QUERY_THREAD_POOL =
         new ScheduledThreadPoolExecutor(Constant.PROCESSOR_NUM, new ThreadFactoryBuilder().setNameFormat("async-job-query-%s").build());
-
-    /**
-     * 预占任务的线程池
-     */
-    private static final ThreadPoolExecutor OCCUPY_THREAD_POOL =  new ThreadPoolExecutor(10, 10, 60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setNameFormat("async-job-occupy-%s").build());
-
-    private static Long JOB_CURSOR = 0L;
 
     private static final Long ING_JOB_SIZE = 30000L;
 
@@ -72,7 +62,7 @@ public class AsyncJobEngine {
         long start = System.currentTimeMillis();
         log.info("start async job engine");
 
-        QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryJobRunnable(), 60, 100, TimeUnit.MILLISECONDS);
+        QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryJobRunnable(), 60, 500, TimeUnit.MILLISECONDS);
 
         QUERY_THREAD_POOL.scheduleWithFixedDelay(new QueryTimeoutJobRunnable(), 1, 1, TimeUnit.DAYS);
 
@@ -86,8 +76,6 @@ public class AsyncJobEngine {
         log.info("stop async job engine");
 
         QUERY_THREAD_POOL.shutdown();
-
-        OCCUPY_THREAD_POOL.shutdown();
 
         for (AbstractJobProcessor<?> abstractJobProcessor : processorMap.values()){
             if (abstractJobProcessor.getThreadPool().isShutdown()){
@@ -103,7 +91,6 @@ public class AsyncJobEngine {
     public class QueryJobRunnable implements Runnable {
         @Override
         public void run() {
-            // TODO: 2025/4/2 使用分布式锁控制并发，
             String id = UUID.randomUUID().toString();
             try {
                 long jobStart = System.currentTimeMillis();
@@ -113,17 +100,15 @@ public class AsyncJobEngine {
                     return;
                 }
 
-                List<AsyncJobDto> pendingJobList = asyncJobDao.getPendingJob(2000, JOB_CURSOR);
+                List<AsyncJobDto> pendingJobList = asyncJobDao.getPendingJob(2000);
                 if (CollectionUtils.isEmpty(pendingJobList)) {
                     return;
                 }
 
-                JOB_CURSOR = pendingJobList.get(pendingJobList.size() - 1).getId();
-
                 for (AsyncJobDto pendingJob : pendingJobList) {
                     ING_JOB_COUNTER.increment();
 
-                    OCCUPY_THREAD_POOL.submit(()-> occupyJob(pendingJob));
+                    occupyJob(pendingJob);
                 }
 
                 log.info("获取待执行任务，任务id:{}, 任务数:{}, 正在处理的任务数:{}, 耗时{}ms", id, pendingJobList.size(), ingJobCountNum, System.currentTimeMillis() - jobStart);

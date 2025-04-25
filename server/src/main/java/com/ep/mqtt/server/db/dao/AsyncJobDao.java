@@ -21,14 +21,12 @@ public interface AsyncJobDao extends BaseMapper<AsyncJobDto> {
      *
      * @param size
      *            单次获取的任务数
-     * @param cursor 游标
      * @return 待执行任务列表
      */
-    default List<AsyncJobDto> getPendingJob(Integer size, Long cursor) {
+    default List<AsyncJobDto> getPendingJob(Integer size) {
         return selectList(
                 Wrappers.lambdaQuery(AsyncJobDto.class).eq(AsyncJobDto::getExecuteStatus, AsyncJobStatus.READY)
-                        .le(AsyncJobDto::getExpectExecuteTime, System.currentTimeMillis()).orderByAsc(AsyncJobDto::getId)
-                        .gt(AsyncJobDto::getId, cursor)
+                        .le(AsyncJobDto::getExpectExecuteTime, System.currentTimeMillis())
                         .last("limit " + size));
     }
 
