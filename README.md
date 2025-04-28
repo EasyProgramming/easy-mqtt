@@ -17,7 +17,7 @@
 
 ## 🚀 快速开始
 ### 1.下载安装Easy MQTT
-点击 [这里](https://github.com/EasyProgramming/easy-mqtt/releases) 下载最新的已编译的easy mqtt压缩包，并解压
+点击 [这里](https://gitee.com/EasyProgramming/easy-mqtt/releases) 下载最新的已编译的easy mqtt压缩包，并解压
 ### 2.启动Easy MQTT
 ```shell script
 sh bin/start.sh -c conf/conf.yml
