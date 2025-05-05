@@ -13,7 +13,9 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -28,8 +30,6 @@ public class InsertSendMessageQueue {
     public static int QUEUE_SIZE = 50000;
 
     public static int BATCH_INSERT_SIZE = 2000;
-
-    private final static ReadWriteLockUtil LOCK = new ReadWriteLockUtil();
 
     /**
      * 自动插入的线程池
@@ -69,15 +69,13 @@ public class InsertSendMessageQueue {
                         continue;
                     }
 
-                    LOCK.writeLock(() -> {
-                        DataManage.add(sendMessageDto);
+                    DataManage.add(sendMessageDto);
 
-                        if (DataManage.size() < BATCH_INSERT_SIZE) {
-                            return;
-                        }
+                    if (DataManage.size() < BATCH_INSERT_SIZE) {
+                        continue;
+                    }
 
-                        doInsert(sendMessageDao);
-                    });
+                    doInsert(sendMessageDao);
                 } catch (InterruptedException e) {
                     log.warn("插入发送消息队列被打断");
                     return;
@@ -125,7 +123,7 @@ public class InsertSendMessageQueue {
 
     public static class AutoInsertSendMessageRunnable implements Runnable {
 
-        private final static Long AUTO_INSERT_THRESHOLD = 200L;
+        private final static Long AUTO_INSERT_THRESHOLD = 600L;
 
         private final SendMessageDao sendMessageDao;
 
@@ -140,7 +138,7 @@ public class InsertSendMessageQueue {
                     return;
                 }
 
-                LOCK.writeLock(() -> doInsert(sendMessageDao));
+                doInsert(sendMessageDao);
             } catch (Throwable e) {
                 log.error("自动插入发送消息异常", e);
             }
@@ -148,14 +146,15 @@ public class InsertSendMessageQueue {
     }
 
     private static void doInsert(SendMessageDao sendMessageDao) {
-        if (DataManage.size() <= 0) {
+        List<SendMessageDto> tempList = DataManage.get();
+
+        if (CollectionUtils.isEmpty(tempList)) {
             return;
         }
 
-        List<SendMessageDto> tempList = DataManage.get();
         BATCH_INSERT_SEND_MESSAGE_THREAD_POOL.submit(() -> {
             try {
-                sendMessageDao.insert(tempList);
+                sendMessageDao.insert(tempList, BATCH_INSERT_SIZE);
 
                 for (SendMessageDto sendMessageDto : tempList) {
                     send(sendMessageDto);
@@ -164,8 +163,6 @@ public class InsertSendMessageQueue {
                 log.error("批量插入发送消息异常", e);
             }
         });
-
-        DataManage.clear();
     }
 
     private static void send(SendMessageDto sendMessageDto) {
@@ -192,16 +189,16 @@ public class InsertSendMessageQueue {
             });
         }
 
-        public static void clear() {
-            LOCK.writeLock(() -> {
+        public static List<SendMessageDto> get() {
+            return LOCK.writeLock(() -> {
+                ArrayList<SendMessageDto> tempList = Lists.newArrayList(DATA_LIST);
+
                 DATA_LIST.clear();
 
                 LAST_EDIT_TIME = System.currentTimeMillis();
-            });
-        }
 
-        public static List<SendMessageDto> get() {
-            return LOCK.readLock(() -> Lists.newArrayList(DATA_LIST));
+                return tempList;
+            });
         }
 
         public static int size() {

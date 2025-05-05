@@ -43,4 +43,17 @@ public class ReadWriteLockUtil {
         }
     }
 
+    /**
+     * 执行写操作任务
+     */
+    public  <T> T writeLock(Supplier<T> supplier) {
+        writeLock.lock();
+        try {
+            return supplier.get();
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+
 }
