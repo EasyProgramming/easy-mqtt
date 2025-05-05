@@ -4,13 +4,14 @@ import com.ep.mqtt.server.db.dao.ClientDao;
 import com.ep.mqtt.server.db.dto.ClientDto;
 import com.ep.mqtt.server.metadata.Constant;
 import com.ep.mqtt.server.metadata.LocalLock;
+import com.ep.mqtt.server.util.TransactionUtil;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import javax.annotation.Resource;
 import java.util.concurrent.TimeUnit;
@@ -35,12 +36,14 @@ public class MessageIdDeal {
     @Resource
     private ClientDao clientDao;
 
+    @Resource
+    private TransactionUtil transactionUtil;
+
     /**
      * 生成消息id
      * @param clientId 客户端信息
      * @return 消息id
      */
-    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public Integer genMessageId(String clientId){
         synchronized (LocalLock.LOCK_CLIENT.getLocalLockName(clientId)){
             IdProgress idProgress = MESSAGE_ID_CACHE.getIfPresent(clientId);
@@ -53,15 +56,30 @@ public class MessageIdDeal {
             }
 
             if (idProgress.getCurrentId() >= idProgress.getMaxId()){
-                ClientDto clientDto = clientDao.lock(clientId);
-                if (clientDto == null) {
+                Long maxId = idProgress.getMaxId();
+                Integer size = idProgress.getSize();
+
+                DefaultTransactionDefinition defaultTransactionDefinition = new DefaultTransactionDefinition(transactionUtil.getDefaultTransactionDefinition());
+                defaultTransactionDefinition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+                Long newMaxId = transactionUtil.transaction(defaultTransactionDefinition, ()->{
+                    ClientDto clientDto = clientDao.lock(clientId);
+                    if (clientDto == null) {
+                        return null;
+                    }
+
+                    Long tempMaxId = maxId + size;
+
+                    clientDao.updateMessageIdProgress(clientId, tempMaxId);
+
+                    return tempMaxId;
+                });
+
+                if (newMaxId == null){
                     return null;
                 }
 
-                Long newMaxId = idProgress.getMaxId() + idProgress.getSize();
-
                 idProgress.setMaxId(newMaxId);
-                clientDao.updateMessageIdProgress(clientId, newMaxId);
             }
 
             long newCurrentId = idProgress.getCurrentId() + 1;

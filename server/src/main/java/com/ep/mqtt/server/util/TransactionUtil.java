@@ -57,5 +57,7 @@ public class TransactionUtil {
         }
     }
 
-
+    public TransactionDefinition getDefaultTransactionDefinition() {
+        return defaultTransactionDefinition;
+    }
 }
