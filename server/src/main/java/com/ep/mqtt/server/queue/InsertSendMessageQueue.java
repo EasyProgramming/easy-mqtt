@@ -29,7 +29,7 @@ public class InsertSendMessageQueue {
 
     public static int QUEUE_SIZE = 50000;
 
-    public static int BATCH_INSERT_SIZE = 2000;
+    public static int BATCH_INSERT_SIZE = 50;
 
     /**
      * 自动插入的线程池
